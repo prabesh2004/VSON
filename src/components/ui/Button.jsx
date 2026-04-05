@@ -1,6 +1,8 @@
 import { memo } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
 
+const _MOTION = motion
+
 /**
  * @typedef {'primary'|'secondary'|'ghost'|'danger'} ButtonVariant
  * @typedef {'sm'|'md'|'lg'} ButtonSize

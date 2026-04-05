@@ -4,6 +4,8 @@ import { motion, useReducedMotion } from 'framer-motion'
 import { Eye, Menu, X } from 'lucide-react'
 import { ROUTES } from '@/lib/constants'
 
+const _MOTION = motion
+
 const NAV_LINKS = [
   { label: 'Features', href: '#features' },
   { label: 'Technology', href: '#technology' },
@@ -20,26 +22,28 @@ export const Navbar = () => {
 
   return (
     <header
-      className="fixed top-0 left-0 right-0 z-50 bg-[#0B121B]/90 backdrop-blur-md border-b border-[#2F3C4C]"
+      className="absolute top-0 left-0 right-0 z-50 bg-[linear-gradient(180deg,rgba(11,18,27,0.92)_0%,rgba(11,18,27,0.66)_72%,rgba(11,18,27,0)_100%)]"
       role="banner"
     >
       <nav
-        className="max-w-[90rem] mx-auto px-4 sm:px-6 lg:px-10 h-16 flex items-center justify-between"
+        className="max-w-[90rem] mx-auto px-4 sm:px-6 lg:px-10 h-16 sm:h-[4.25rem] flex items-center"
         aria-label="Main navigation"
       >
         <motion.a
           href="#"
-          className="flex items-center gap-3 sm:gap-4 group focus-visible:ring-2 focus-visible:ring-[#A9D1F5] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0B121B] rounded-sm"
+          className="flex items-center gap-3 sm:gap-4 group rounded-md focus-visible:ring-2 focus-visible:ring-[#A9D1F5] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0B121B]"
           aria-label="Vision — home"
           initial={prefersReduced ? {} : { opacity: 0, x: -12 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.4 }}
         >
-          <Eye className="w-7 h-7 text-[#A9D1F5] shrink-0" strokeWidth={1.75} aria-hidden="true" />
+          <span className="inline-flex items-center justify-center w-9 h-7 rounded-full border border-[#2F3C4C] bg-[#161F2C]">
+            <Eye className="w-4.5 h-4.5 text-[#A9D1F5] shrink-0" strokeWidth={1.9} aria-hidden="true" />
+          </span>
           <span className="hidden sm:block h-7 w-px shrink-0 bg-[#2F3C4C]" aria-hidden="true" />
           <div className="flex items-center gap-3">
-            <span className="font-display font-bold text-[#E9EEF4] text-lg tracking-wide leading-none">VISION</span>
-            <span className="hidden sm:block text-[#7A8B9B] font-body text-[11px] leading-snug max-w-[188px]">
+            <span className="font-display font-extrabold text-[#E9EEF4] text-[1.7rem] tracking-[0.03em] leading-none">VISION</span>
+            <span className="hidden lg:block text-[#7A8B9B] font-body text-[0.52rem] leading-snug max-w-[10.5rem] uppercase tracking-[0.08em]">
               Enhancing Independence
               <br />
               through Persistent Sight
@@ -48,7 +52,7 @@ export const Navbar = () => {
         </motion.a>
 
         <motion.ul
-          className="hidden md:flex items-center gap-8"
+          className="hidden md:flex items-center gap-6 ml-auto"
           role="list"
           initial={prefersReduced ? {} : { opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
@@ -58,7 +62,7 @@ export const Navbar = () => {
             <li key={href}>
               <a
                 href={href}
-                className="font-body text-sm text-[#E9EEF4]/90 hover:text-[#E9EEF4] transition-colors focus-visible:ring-2 focus-visible:ring-[#A9D1F5] rounded-sm"
+                className="font-body text-sm lg:text-base text-[#E9EEF4]/90 hover:text-[#E9EEF4] transition-colors rounded-sm focus-visible:ring-2 focus-visible:ring-[#A9D1F5]"
               >
                 {label}
               </a>
@@ -67,7 +71,7 @@ export const Navbar = () => {
         </motion.ul>
 
         <motion.div
-          className="flex items-center gap-3"
+          className="flex items-center gap-2 md:ml-4"
           initial={prefersReduced ? {} : { opacity: 0, x: 12 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.4, delay: 0.12 }}
@@ -75,7 +79,7 @@ export const Navbar = () => {
           <button
             type="button"
             onClick={handleLogin}
-            className="hidden md:inline-flex font-body text-sm text-[#E9EEF4] bg-[#161F2C] border border-[#2F3C4C] hover:bg-[#1c2838] px-4 py-2 rounded-lg transition-colors min-h-touch min-w-touch items-center justify-center focus-visible:ring-2 focus-visible:ring-[#A9D1F5] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0B121B]"
+            className="hidden md:inline-flex font-body text-sm lg:text-base text-[#E9EEF4] border border-[#2F3C4C] bg-[#161F2C]/82 hover:bg-[#161F2C] px-4 py-1.5 rounded-lg transition-colors min-h-touch min-w-touch items-center justify-center shadow-[0_6px_18px_rgba(2,8,18,0.36)] focus-visible:ring-2 focus-visible:ring-[#A9D1F5] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0B121B]"
             aria-label="Login to Vision app"
           >
             Login
@@ -106,7 +110,7 @@ export const Navbar = () => {
               key={href}
               href={href}
               onClick={() => setMenuOpen(false)}
-              className="font-body text-sm text-[#E9EEF4]/90 py-2"
+              className="font-body text-base text-[#E9EEF4]/90 py-2"
               role="menuitem"
             >
               {label}
@@ -115,7 +119,7 @@ export const Navbar = () => {
           <button
             type="button"
             onClick={handleLogin}
-            className="font-body text-sm text-[#E9EEF4] bg-[#161F2C] border border-[#2F3C4C] px-4 py-3 rounded-lg text-left min-h-touch"
+            className="font-body text-base text-[#E9EEF4] bg-[#161F2C] border border-[#2F3C4C] px-4 py-3 rounded-lg text-left min-h-touch"
             aria-label="Login to Vision app"
           >
             Login

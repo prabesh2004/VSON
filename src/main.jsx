@@ -1,14 +1,16 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { createBrowserRouter, RouterProvider } from 'react-router-dom'
+import { createBrowserRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import './index.css'
 
+import { AppRuntime } from '@/AppRuntime'
 import { Home } from '@/pages/Home'
 import { Describe } from '@/pages/Describe'
 import { ReadWeb } from '@/pages/ReadWeb'
 import { ReadDoc } from '@/pages/ReadDoc'
 import { Settings } from '@/pages/Settings'
+import { AppErrorFallback } from '@/components/ui/AppErrorFallback'
 import { ROUTES, QUERY_STALE_TIME, QUERY_RETRY_COUNT } from '@/lib/constants'
 
 async function enableMocking() {
@@ -30,19 +32,21 @@ const queryClient = new QueryClient({
   },
 })
 
+const routeErrorElement = <AppErrorFallback />
+
 const router = createBrowserRouter([
-  { path: ROUTES.HOME, element: <Home /> },
-  { path: ROUTES.DESCRIBE, element: <Describe /> },
-  { path: ROUTES.READ_WEB, element: <ReadWeb /> },
-  { path: ROUTES.READ_DOC, element: <ReadDoc /> },
-  { path: ROUTES.SETTINGS, element: <Settings /> },
+  { path: ROUTES.HOME, element: <Home />, errorElement: routeErrorElement },
+  { path: ROUTES.DESCRIBE, element: <Describe />, errorElement: routeErrorElement },
+  { path: ROUTES.READ_WEB, element: <ReadWeb />, errorElement: routeErrorElement },
+  { path: ROUTES.READ_DOC, element: <ReadDoc />, errorElement: routeErrorElement },
+  { path: ROUTES.SETTINGS, element: <Settings />, errorElement: routeErrorElement },
 ])
 
 enableMocking().then(() => {
   createRoot(document.getElementById('root')).render(
     <StrictMode>
       <QueryClientProvider client={queryClient}>
-        <RouterProvider router={router} />
+        <AppRuntime router={router} />
       </QueryClientProvider>
     </StrictMode>
   )

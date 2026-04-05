@@ -3,6 +3,8 @@ import { motion, useReducedMotion } from 'framer-motion'
 import { Mic, MicOff, Loader2 } from 'lucide-react'
 import { useVoiceStore } from '@/store/useVoiceStore'
 
+const _MOTION = motion
+
 /**
  * @typedef {Object} VoiceButtonProps
  * @property {() => void} onToggle

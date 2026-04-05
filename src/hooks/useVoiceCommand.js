@@ -9,7 +9,7 @@ const browserSTTAvailable =
 
 /**
  * @typedef {Object} UseVoiceCommandOptions
- * @property {(command: string) => void} onCommand - called when a recognised command is matched
+ * @property {(command: string) => boolean|void|Promise<boolean|void>} onCommand - called when a recognised command is matched
  */
 
 /**
@@ -21,12 +21,49 @@ const browserSTTAvailable =
  * @returns {{ toggleListening: () => void, isSupported: boolean }}
  */
 export const useVoiceCommand = ({ onCommand }) => {
-  const { isListening, setIsListening, setIsProcessing, setLastCommand, setLiveTranscript, reset } =
-    useVoiceStore()
+  const {
+    isListening,
+    setIsListening,
+    setIsProcessing,
+    setLastCommand,
+    setLiveTranscript,
+    setCommandFeedback,
+    setVoiceError,
+    clearFeedback,
+    reset,
+  } = useVoiceStore()
 
   const recognitionRef = useRef(null)
   const mediaRecorderRef = useRef(null)
   const chunksRef = useRef([])
+
+  const processCommand = useCallback(
+    async (transcriptText) => {
+      const matched = VOICE_COMMANDS.find((cmd) => transcriptText.includes(cmd))
+
+      if (!matched) {
+        setCommandFeedback('unsupported', `Unsupported command: "${transcriptText}"`)
+        return
+      }
+
+      setCommandFeedback('recognized', `Recognized: ${matched}`)
+
+      try {
+        const handled = await Promise.resolve(onCommand(matched))
+
+        if (handled === false) {
+          setCommandFeedback('unsupported', `Command not available here: ${matched}`)
+          return
+        }
+
+        setCommandFeedback('executed', `Executed: ${matched}`)
+      } catch {
+        setVoiceError('There was a problem executing your voice command. Please try again.')
+        setCommandFeedback('failed', `Failed: ${matched}`)
+      }
+    },
+    [onCommand, setCommandFeedback, setVoiceError]
+  )
 
   // ── Browser Speech Recognition ──────────────────────────────────
   const startBrowserSTT = useCallback(() => {
@@ -36,7 +73,12 @@ export const useVoiceCommand = ({ onCommand }) => {
     recognition.interimResults = true
     recognition.lang = 'en-US'
 
-    recognition.onstart = () => setIsListening(true)
+    recognition.onstart = () => {
+      clearFeedback()
+      setVoiceError(null)
+      setCommandFeedback('listening', 'Listening...')
+      setIsListening(true)
+    }
 
     recognition.onresult = (event) => {
       const results = Array.from(event.results)
@@ -47,13 +89,15 @@ export const useVoiceCommand = ({ onCommand }) => {
       if (final) {
         const finalText = final[0].transcript.trim().toLowerCase()
         setLastCommand(finalText)
-        const matched = VOICE_COMMANDS.find((cmd) => finalText.includes(cmd))
-        if (matched) onCommand(matched)
+        void processCommand(finalText)
       }
     }
 
     recognition.onerror = () => {
-      reset()
+      setVoiceError('Speech recognition failed. Please try again.')
+      setCommandFeedback('failed', 'Speech recognition failed.')
+      setIsListening(false)
+      setIsProcessing(false)
     }
 
     recognition.onend = () => {
@@ -63,12 +107,24 @@ export const useVoiceCommand = ({ onCommand }) => {
 
     recognitionRef.current = recognition
     recognition.start()
-  }, [onCommand, reset, setIsListening, setIsProcessing, setLastCommand, setLiveTranscript])
+  }, [
+    clearFeedback,
+    processCommand,
+    setCommandFeedback,
+    setIsListening,
+    setIsProcessing,
+    setLastCommand,
+    setLiveTranscript,
+    setVoiceError,
+  ])
 
   // ── Fallback: MediaRecorder + /transcribe ────────────────────────
   const startFallbackSTT = useCallback(async () => {
     try {
       const mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      clearFeedback()
+      setVoiceError(null)
+      setCommandFeedback('listening', 'Listening...')
       setIsListening(true)
       chunksRef.current = []
       const recorder = new MediaRecorder(mediaStream)
@@ -84,11 +140,12 @@ export const useVoiceCommand = ({ onCommand }) => {
         try {
           const { transcript } = await transcribeAudio(blob)
           const lower = transcript.trim().toLowerCase()
+          setLiveTranscript(lower)
           setLastCommand(lower)
-          const matched = VOICE_COMMANDS.find((cmd) => lower.includes(cmd))
-          if (matched) onCommand(matched)
+          await processCommand(lower)
         } catch {
-          // silent fallback failure
+          setVoiceError('Audio transcription failed. Please try again.')
+          setCommandFeedback('failed', 'Audio transcription failed.')
         } finally {
           setIsProcessing(false)
         }
@@ -96,9 +153,21 @@ export const useVoiceCommand = ({ onCommand }) => {
 
       recorder.start()
     } catch {
+      setVoiceError('Microphone access failed. Please check browser permissions.')
+      setCommandFeedback('failed', 'Microphone access denied.')
       reset()
     }
-  }, [onCommand, reset, setIsListening, setIsProcessing, setLastCommand])
+  }, [
+    clearFeedback,
+    processCommand,
+    reset,
+    setCommandFeedback,
+    setIsListening,
+    setIsProcessing,
+    setLastCommand,
+    setLiveTranscript,
+    setVoiceError,
+  ])
 
   const stopListening = useCallback(() => {
     if (browserSTTAvailable && recognitionRef.current) {

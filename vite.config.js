@@ -15,8 +15,8 @@ export default defineConfig({
         name: 'Vision — AI Accessibility App',
         short_name: 'Vision',
         description: 'AI-powered accessibility application for visually impaired users',
-        theme_color: '#0D0D1A',
-        background_color: '#0D0D1A',
+        theme_color: '#0B121B',
+        background_color: '#0B121B',
         display: 'standalone',
         icons: [
           { src: '/favicon.svg', sizes: 'any', type: 'image/svg+xml' },

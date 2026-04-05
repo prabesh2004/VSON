@@ -2,6 +2,8 @@ import { memo } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
 import { Camera } from 'lucide-react'
 
+const _MOTION = motion
+
 /**
  * @typedef {Object} CaptureButtonProps
  * @property {() => void} onCapture

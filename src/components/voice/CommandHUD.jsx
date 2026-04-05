@@ -2,6 +2,8 @@ import { memo } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { useVoiceStore } from '@/store/useVoiceStore'
 
+const _MOTION = motion
+
 /**
  * @typedef {Object} CommandHUDProps
  * @property {string} [className]
@@ -13,9 +15,28 @@ export const CommandHUD = memo(
    */
   function CommandHUD({ className = '' }) {
     const prefersReduced = useReducedMotion()
-    const { lastCommand, liveTranscript, isListening } = useVoiceStore()
+    const { lastCommand, liveTranscript, isListening, isProcessing, commandStatus, commandFeedback, voiceError } =
+      useVoiceStore()
 
-    const displayText = isListening ? liveTranscript : lastCommand
+    const displayText =
+      voiceError ||
+      commandFeedback ||
+      (isListening ? liveTranscript : null) ||
+      (isProcessing ? 'Processing command...' : null) ||
+      lastCommand
+
+    const dotClass =
+      commandStatus === 'failed'
+        ? 'bg-[#FF6B6B]'
+        : commandStatus === 'unsupported'
+        ? 'bg-[#FFB347]'
+        : commandStatus === 'executed'
+        ? 'bg-[#00D4AA]'
+        : commandStatus === 'recognized'
+        ? 'bg-[#A9D1F5]'
+        : isListening
+        ? 'bg-[#00D4AA] animate-pulse'
+        : 'bg-[#A9D1F5]'
 
     return (
       <div
@@ -36,10 +57,7 @@ export const CommandHUD = memo(
             >
               <span
                 aria-hidden="true"
-                className={[
-                  'w-2 h-2 rounded-full flex-shrink-0',
-                  isListening ? 'bg-[#00D4AA] animate-pulse' : 'bg-[#A9D1F5]',
-                ].join(' ')}
+                className={['w-2 h-2 rounded-full flex-shrink-0', dotClass].join(' ')}
               />
               <p className="text-[#E9EEF4] font-body text-sm font-medium truncate max-w-xs">
                 {displayText}

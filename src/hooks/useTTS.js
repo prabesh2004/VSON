@@ -12,8 +12,8 @@ import { useAppStore } from '@/store/useAppStore'
  * @returns {{ speak: (text: string) => Promise<void>, stop: () => void }}
  */
 export const useTTS = () => {
-  const { setIsSpeaking } = useVoiceStore()
-  const { fontSize } = useAppStore()
+  const { setIsSpeaking, setVoiceError, setCommandFeedback } = useVoiceStore()
+  const { fontSize, voiceSpeed } = useAppStore()
   const utteranceRef = useRef(null)
   const browserTTSAvailable = typeof window !== 'undefined' && 'speechSynthesis' in window
 
@@ -32,17 +32,25 @@ export const useTTS = () => {
     async (text) => {
       if (!text) return
 
+      setVoiceError(null)
+
+      const fallbackSpeed = fontSize === 'xl' ? 0.85 : fontSize === 'large' ? 0.9 : 1
+      const resolvedSpeed = Number.isFinite(voiceSpeed) ? voiceSpeed : fallbackSpeed
+      const clampedSpeed = Math.min(2, Math.max(0.5, resolvedSpeed))
+
       if (browserTTSAvailable) {
         return new Promise((resolve) => {
           window.speechSynthesis.cancel()
           const utterance = new SpeechSynthesisUtterance(text)
-          utterance.rate = fontSize === 'xl' ? 0.85 : fontSize === 'large' ? 0.9 : 1
+          utterance.rate = clampedSpeed
           utterance.onstart = () => setIsSpeaking(true)
           utterance.onend = () => {
             setIsSpeaking(false)
             resolve()
           }
           utterance.onerror = () => {
+            setVoiceError('Speech playback failed. Please try again.')
+            setCommandFeedback('failed', 'Speech playback failed.')
             setIsSpeaking(false)
             resolve()
           }
@@ -53,15 +61,16 @@ export const useTTS = () => {
 
       try {
         setIsSpeaking(true)
-        const { audio_base64 } = await synthesizeSpeech({ text })
+        const { audio_base64 } = await synthesizeSpeech({ text, speed: clampedSpeed })
         await playBase64Audio(audio_base64)
       } catch {
-        // silent fallback failure — user still sees the text
+        setVoiceError('Text-to-speech service is unavailable right now.')
+        setCommandFeedback('failed', 'TTS fallback failed.')
       } finally {
         setIsSpeaking(false)
       }
     },
-    [browserTTSAvailable, fontSize, setIsSpeaking]
+    [browserTTSAvailable, fontSize, voiceSpeed, setCommandFeedback, setIsSpeaking, setVoiceError]
   )
 
   return { speak, stop }

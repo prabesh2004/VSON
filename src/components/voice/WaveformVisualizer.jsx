@@ -2,7 +2,13 @@ import { memo } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
 import { useVoiceStore } from '@/store/useVoiceStore'
 
+const _MOTION = motion
+
 const BAR_COUNT = 12
+const BAR_PROFILES = Array.from({ length: BAR_COUNT }, (_, i) => ({
+  peakHeight: `${12 + ((i * 7) % 24)}px`,
+  duration: 0.4 + (i % 5) * 0.08,
+}))
 
 /**
  * @typedef {Object} WaveformVisualizerProps
@@ -34,10 +40,10 @@ export const WaveformVisualizer = memo(
               prefersReduced || !isActive
                 ? { height: '8px' }
                 : {
-                    height: ['8px', `${12 + Math.random() * 24}px`, '8px'],
+                    height: ['8px', BAR_PROFILES[i].peakHeight, '8px'],
                     transition: {
                       repeat: Infinity,
-                      duration: 0.4 + Math.random() * 0.4,
+                      duration: BAR_PROFILES[i].duration,
                       delay: (i / BAR_COUNT) * 0.3,
                       ease: 'easeInOut',
                     },

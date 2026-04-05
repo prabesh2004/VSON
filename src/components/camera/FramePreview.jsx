@@ -1,6 +1,8 @@
 import { memo } from 'react'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 
+const _MOTION = motion
+
 /**
  * @typedef {Object} FramePreviewProps
  * @property {string|null} imageDataUrl - base64 data URL of the captured frame

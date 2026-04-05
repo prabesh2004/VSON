@@ -1,19 +1,72 @@
+import { useCallback, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, CircleHelp } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { DocumentReader } from '@/components/reader/DocumentReader'
 import { VoiceButton } from '@/components/voice/VoiceButton'
 import { CommandHUD } from '@/components/voice/CommandHUD'
+import { VoiceHelpModal } from '@/components/voice/VoiceHelpModal'
 import { useTTS } from '@/hooks/useTTS'
 import { useVoiceCommand } from '@/hooks/useVoiceCommand'
+import { ROUTES } from '@/lib/constants'
 
 export const ReadDoc = () => {
   const navigate = useNavigate()
   const { speak, stop: stopSpeaking } = useTTS()
+  const [voiceAction, setVoiceAction] = useState(null)
+  const [isHelpOpen, setIsHelpOpen] = useState(false)
+  const [hasDocument, setHasDocument] = useState(false)
+
+  const handleReadAloud = useCallback(
+    (text, title) => {
+      speak(`${title}. ${text}`)
+    },
+    [speak]
+  )
+
+  const handleContentReady = useCallback(() => {
+    setHasDocument(true)
+  }, [])
 
   const handleCommand = (command) => {
-    if (command === 'stop') stopSpeaking()
-    else if (command === 'go back') navigate(-1)
+    if (command === 'stop') {
+      stopSpeaking()
+      return true
+    }
+
+    if (command === 'go back') {
+      navigate(-1)
+      return true
+    }
+
+    if (command === 'settings') {
+      navigate(ROUTES.SETTINGS)
+      return true
+    }
+
+    if (command === 'open book') {
+      navigate(ROUTES.READ_DOC)
+      return true
+    }
+
+    if (command === 'help') {
+      setIsHelpOpen(true)
+      return true
+    }
+
+    if (command === 'next page' || command === 'previous page') {
+      if (!hasDocument) return false
+      setVoiceAction({ type: command, nonce: Date.now() })
+      return true
+    }
+
+    if (command === 'read this page' || command === 'repeat') {
+      if (!hasDocument) return false
+      setVoiceAction({ type: command, nonce: Date.now() })
+      return true
+    }
+
+    return false
   }
 
   const { toggleListening } = useVoiceCommand({ onCommand: handleCommand })
@@ -33,12 +86,27 @@ export const ReadDoc = () => {
         <h1 className="font-display text-xl font-semibold text-[#E9EEF4]">Read Document</h1>
       </header>
 
-      <DocumentReader onReadAloud={(text, title) => speak(`${title}. ${text}`)} />
+      <DocumentReader
+        onReadAloud={handleReadAloud}
+        onContentReady={handleContentReady}
+        voiceAction={voiceAction}
+      />
 
       <div className="flex flex-col items-center gap-3 mt-auto pt-4">
+        <Button
+          variant="secondary"
+          size="sm"
+          leftIcon={<CircleHelp size={16} aria-hidden="true" />}
+          onClick={() => setIsHelpOpen(true)}
+          ariaLabel="Open voice command help"
+        >
+          Voice Help
+        </Button>
         <VoiceButton onToggle={toggleListening} />
         <CommandHUD />
       </div>
+
+      <VoiceHelpModal isOpen={isHelpOpen} onClose={() => setIsHelpOpen(false)} />
     </main>
   )
 }

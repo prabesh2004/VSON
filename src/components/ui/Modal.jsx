@@ -1,6 +1,8 @@
-import { useEffect, useRef, memo } from 'react'
+import { useCallback, useEffect, useRef, memo } from 'react'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { X } from 'lucide-react'
+
+const _MOTION = motion
 
 /**
  * @typedef {Object} ModalProps
@@ -19,6 +21,20 @@ export const Modal = memo(
     const prefersReduced = useReducedMotion()
     const overlayRef = useRef(null)
     const firstFocusableRef = useRef(null)
+
+    const trapFocus = useCallback((e) => {
+      const modal = overlayRef.current?.querySelector('[role="dialog"]')
+      if (!modal) return
+      const focusable = modal.querySelectorAll(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      )
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      if (e.shiftKey ? document.activeElement === first : document.activeElement === last) {
+        e.preventDefault()
+        ;(e.shiftKey ? last : first)?.focus()
+      }
+    }, [])
 
     useEffect(() => {
       if (!isOpen) return
@@ -39,21 +55,7 @@ export const Modal = memo(
         document.body.style.overflow = ''
         previouslyFocused?.focus()
       }
-    }, [isOpen, onClose])
-
-    const trapFocus = (e) => {
-      const modal = overlayRef.current?.querySelector('[role="dialog"]')
-      if (!modal) return
-      const focusable = modal.querySelectorAll(
-        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-      )
-      const first = focusable[0]
-      const last = focusable[focusable.length - 1]
-      if (e.shiftKey ? document.activeElement === first : document.activeElement === last) {
-        e.preventDefault()
-        ;(e.shiftKey ? last : first)?.focus()
-      }
-    }
+    }, [isOpen, onClose, trapFocus])
 
     return (
       <AnimatePresence>

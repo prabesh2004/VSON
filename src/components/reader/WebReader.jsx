@@ -1,4 +1,4 @@
-import { memo } from 'react'
+import { memo, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -7,6 +7,7 @@ import { Globe } from 'lucide-react'
 import { readUrl } from '@/api/reader'
 import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/ui/Spinner'
+import { useAppStore } from '@/store/useAppStore'
 import { TextDisplay } from './TextDisplay'
 
 const schema = z.object({
@@ -16,13 +17,16 @@ const schema = z.object({
 /**
  * @typedef {Object} WebReaderProps
  * @property {(text: string, title: string) => void} [onReadAloud]
+ * @property {(content: { text: string, title: string, word_count: number }) => void} [onContentReady]
  */
 
 export const WebReader = memo(
   /**
    * @param {WebReaderProps} props
    */
-  function WebReader({ onReadAloud }) {
+  function WebReader({ onReadAloud, onContentReady }) {
+    const { isConnected } = useAppStore()
+
     const {
       register,
       handleSubmit,
@@ -35,9 +39,14 @@ export const WebReader = memo(
     })
 
     const onSubmit = (values) => {
+      if (!isConnected) return
       reset()
       mutate({ url: values.url })
     }
+
+    useEffect(() => {
+      if (data && onContentReady) onContentReady(data)
+    }, [data, onContentReady])
 
     return (
       <div className="flex flex-col gap-6">
@@ -52,6 +61,7 @@ export const WebReader = memo(
                 type="url"
                 autoComplete="url"
                 placeholder="https://example.com"
+                disabled={!isConnected || isPending}
                 aria-describedby={errors.url ? 'url-error' : undefined}
                 aria-invalid={!!errors.url}
                 {...register('url')}
@@ -62,7 +72,12 @@ export const WebReader = memo(
                   errors.url ? 'border-[#FF6B6B]' : 'border-[#2F3C4C]',
                 ].join(' ')}
               />
-              <Button type="submit" isLoading={isPending} leftIcon={<Globe size={18} aria-hidden="true" />}>
+              <Button
+                type="submit"
+                disabled={!isConnected}
+                isLoading={isPending}
+                leftIcon={<Globe size={18} aria-hidden="true" />}
+              >
                 Read
               </Button>
             </div>
@@ -73,6 +88,12 @@ export const WebReader = memo(
             )}
           </div>
         </form>
+
+        {!isConnected && (
+          <p role="status" aria-live="polite" className="text-[#FFB347] font-body text-sm text-center">
+            You are offline. Web reading is unavailable until you reconnect.
+          </p>
+        )}
 
         {isPending && <Spinner label="Reading webpage…" />}
 

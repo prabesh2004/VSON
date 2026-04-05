@@ -1,5 +1,4 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
-import { canvasToBase64 } from '@/lib/utils'
 import { MAX_IMAGE_SIZE_BYTES } from '@/lib/constants'
 
 /**
@@ -23,23 +22,35 @@ export const useCamera = () => {
   const [error, setError] = useState(null)
   const [capturedDataUrl, setCapturedDataUrl] = useState(null)
   const [capturedBase64, setCapturedBase64] = useState(null)
+  const streamRef = useRef(null)
   const videoRef = useRef(null)
   const canvasRef = useRef(null)
 
+  const stopTracks = (targetStream) => {
+    targetStream?.getTracks().forEach((track) => track.stop())
+  }
+
   useEffect(() => {
     return () => {
-      stream?.getTracks().forEach((t) => t.stop())
+      stopTracks(streamRef.current)
+      streamRef.current = null
     }
-  }, [stream])
+  }, [])
 
   const startCamera = useCallback(async () => {
     setError(null)
     setIsLoading(true)
     try {
+      if (streamRef.current) {
+        stopTracks(streamRef.current)
+      }
+
       const mediaStream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
         audio: false,
       })
+
+      streamRef.current = mediaStream
       setStream(mediaStream)
     } catch (err) {
       const msg =
@@ -55,11 +66,12 @@ export const useCamera = () => {
   }, [])
 
   const stopCamera = useCallback(() => {
-    stream?.getTracks().forEach((t) => t.stop())
+    stopTracks(streamRef.current)
+    streamRef.current = null
     setStream(null)
     setCapturedDataUrl(null)
     setCapturedBase64(null)
-  }, [stream])
+  }, [])
 
   const captureFrame = useCallback(() => {
     const video = videoRef.current
