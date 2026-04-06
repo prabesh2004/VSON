@@ -5,6 +5,10 @@ import { VOICE_COMMANDS } from '@/lib/constants'
 const COMMAND_HELP = {
   describe: 'Capture and describe your current surroundings.',
   'describe in detail': 'Capture and request a more detailed scene description.',
+  'start walk mode': 'Start continuous frame-by-frame walkthrough mode.',
+  'pause walk mode': 'Pause realtime walkthrough capture.',
+  'resume walk mode': 'Resume realtime walkthrough after pause.',
+  'stop walk mode': 'Stop realtime walkthrough mode completely.',
   'read this page': 'Read the current scene/document/web content aloud.',
   'open book': 'Open the document reader page.',
   'next page': 'Move to the next page while reading a document.',

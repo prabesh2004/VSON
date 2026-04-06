@@ -1,5 +1,6 @@
 import { Navbar } from '@/components/landing/Navbar'
 import { LandingHero } from '@/components/landing/LandingHero'
+import { LandingSections } from '@/components/landing/LandingSections'
 
 export const Home = () => {
   return (
@@ -15,6 +16,7 @@ export const Home = () => {
         <Navbar />
         <main id="main-content" tabIndex={-1} aria-label="Vision landing page">
           <LandingHero />
+          <LandingSections />
         </main>
       </div>
     </>

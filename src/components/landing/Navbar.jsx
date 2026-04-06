@@ -30,7 +30,7 @@ export const Navbar = () => {
         aria-label="Main navigation"
       >
         <motion.a
-          href="#"
+          href="#home"
           className="flex items-center gap-3 sm:gap-4 group rounded-md focus-visible:ring-2 focus-visible:ring-[#A9D1F5] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0B121B]"
           aria-label="Vision — home"
           initial={prefersReduced ? {} : { opacity: 0, x: -12 }}
@@ -99,7 +99,7 @@ export const Navbar = () => {
 
       {menuOpen && (
         <motion.div
-          className="md:hidden bg-[#0B121B] border-t border-[#2F3C4C] px-4 sm:px-6 py-4 flex flex-col gap-3"
+          className="md:hidden bg-[#0B121B]/98 backdrop-blur-xl border-t border-[#2F3C4C] px-4 sm:px-6 py-4 flex flex-col gap-3 max-h-[65dvh] overflow-y-auto"
           initial={prefersReduced ? {} : { opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.2 }}

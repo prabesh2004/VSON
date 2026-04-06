@@ -39,7 +39,9 @@ export const useVoiceCommand = ({ onCommand }) => {
 
   const processCommand = useCallback(
     async (transcriptText) => {
-      const matched = VOICE_COMMANDS.find((cmd) => transcriptText.includes(cmd))
+      const matched = [...VOICE_COMMANDS]
+        .sort((a, b) => b.length - a.length)
+        .find((cmd) => transcriptText.includes(cmd))
 
       if (!matched) {
         setCommandFeedback('unsupported', `Unsupported command: "${transcriptText}"`)

@@ -9,7 +9,12 @@ import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { getPreferences, updatePreferences } from '@/api/preferences'
 import { useAppStore } from '@/store/useAppStore'
-import { FONT_SIZES, DETAIL_LEVELS } from '@/lib/constants'
+import {
+  FONT_SIZES,
+  DETAIL_LEVELS,
+  WALK_TARGET_FPS_MAX,
+  WALK_TARGET_FPS_MIN,
+} from '@/lib/constants'
 
 const _MOTION = motion
 
@@ -17,6 +22,8 @@ const schema = z.object({
   fontSize: z.enum(FONT_SIZES),
   detailLevel: z.enum(DETAIL_LEVELS),
   voiceSpeed: z.number().min(0.5).max(2),
+  walkTargetFps: z.number().min(WALK_TARGET_FPS_MIN).max(WALK_TARGET_FPS_MAX),
+  walkAdaptiveScheduling: z.boolean(),
 })
 
 const FONT_LABELS = { normal: 'Normal', large: 'Large', xl: 'Extra Large' }
@@ -26,8 +33,19 @@ const PREFERENCES_USER_ID = 'vision-frontend-user'
 export const Settings = () => {
   const navigate = useNavigate()
   const prefersReduced = useReducedMotion()
-  const { isConnected, fontSize, detailLevel, voiceSpeed, setFontSize, setDetailLevel, setVoiceSpeed } =
-    useAppStore()
+  const {
+    isConnected,
+    fontSize,
+    detailLevel,
+    voiceSpeed,
+    walkTargetFps,
+    walkAdaptiveScheduling,
+    setFontSize,
+    setDetailLevel,
+    setVoiceSpeed,
+    setWalkTargetFps,
+    setWalkAdaptiveScheduling,
+  } = useAppStore()
   const [saveMessage, setSaveMessage] = useState('')
   const [saveType, setSaveType] = useState('success')
 
@@ -43,13 +61,18 @@ export const Settings = () => {
       fontSize,
       detailLevel,
       voiceSpeed,
+      walkTargetFps,
+      walkAdaptiveScheduling,
     },
   })
 
   const watchedFontSize = useWatch({ control, name: 'fontSize' })
   const watchedDetailLevel = useWatch({ control, name: 'detailLevel' })
   const watchedVoiceSpeed = useWatch({ control, name: 'voiceSpeed' })
+  const watchedWalkTargetFps = useWatch({ control, name: 'walkTargetFps' })
+  const watchedWalkAdaptiveScheduling = useWatch({ control, name: 'walkAdaptiveScheduling' })
   const displayVoiceSpeed = Number.isFinite(watchedVoiceSpeed) ? watchedVoiceSpeed : voiceSpeed
+  const displayWalkTargetFps = Number.isFinite(watchedWalkTargetFps) ? watchedWalkTargetFps : walkTargetFps
 
   useEffect(() => {
     let mounted = true
@@ -100,6 +123,8 @@ export const Settings = () => {
     setFontSize(values.fontSize)
     setDetailLevel(values.detailLevel)
     setVoiceSpeed(values.voiceSpeed)
+    setWalkTargetFps(values.walkTargetFps)
+    setWalkAdaptiveScheduling(values.walkAdaptiveScheduling)
 
     if (!isConnected) {
       setSaveType('warning')
@@ -225,6 +250,54 @@ export const Settings = () => {
             />
             <span className="text-[#7A8B9B] font-body text-sm w-12 text-right">{displayVoiceSpeed.toFixed(1)}×</span>
           </div>
+        </Card>
+
+        {/* Realtime walk mode scheduling */}
+        <Card>
+          <label
+            htmlFor="walk-fps"
+            className="font-display font-semibold text-[#E9EEF4] text-base block mb-4"
+          >
+            Walk Mode Target FPS
+          </label>
+          <div className="flex items-center gap-4">
+            <span className="text-[#7A8B9B] font-body text-sm w-10">{WALK_TARGET_FPS_MIN.toFixed(1)}</span>
+            <input
+              id="walk-fps"
+              type="range"
+              min={WALK_TARGET_FPS_MIN}
+              max={WALK_TARGET_FPS_MAX}
+              step={0.1}
+              aria-valuemin={WALK_TARGET_FPS_MIN}
+              aria-valuemax={WALK_TARGET_FPS_MAX}
+              aria-valuenow={displayWalkTargetFps}
+              aria-valuetext={`${displayWalkTargetFps.toFixed(1)} frames per second`}
+              aria-label="Walk mode target frames per second"
+              {...register('walkTargetFps', { valueAsNumber: true })}
+              className="flex-1 accent-[#A9D1F5] h-2 rounded-full cursor-pointer"
+            />
+            <span className="text-[#7A8B9B] font-body text-sm w-14 text-right">{displayWalkTargetFps.toFixed(1)} fps</span>
+          </div>
+          <p className="mt-3 text-xs text-[#7A8B9B] font-body">
+            Higher FPS gives faster updates but can increase backend/API load.
+          </p>
+
+          <label className="mt-4 flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              aria-label="Enable adaptive walk mode slowdown"
+              {...register('walkAdaptiveScheduling')}
+              className="mt-0.5 h-4 w-4 rounded border-[#2F3C4C] bg-[#0B121B] text-[#A9D1F5] focus:ring-[#A9D1F5]"
+            />
+            <span>
+              <span className="block text-sm text-[#E9EEF4] font-body font-medium">Adaptive scheduling</span>
+              <span className="block text-xs text-[#7A8B9B] font-body mt-1">
+                {watchedWalkAdaptiveScheduling
+                  ? 'Enabled: auto-slows capture interval when processing is under load.'
+                  : 'Disabled: uses fixed frame interval at all times.'}
+              </span>
+            </span>
+          </label>
         </Card>
 
         <Button type="submit" isLoading={isSubmitting} leftIcon={<Check size={18} aria-hidden="true" />}>

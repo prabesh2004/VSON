@@ -1,6 +1,10 @@
 export const VOICE_COMMANDS = /** @type {const} */ ([
   'describe',
   'describe in detail',
+  'start walk mode',
+  'pause walk mode',
+  'resume walk mode',
+  'stop walk mode',
   'read this page',
   'open book',
   'next page',
@@ -30,9 +34,14 @@ export const QUERY_RETRY_COUNT = 1
 
 export const TTS_DEFAULT_SPEED = 1
 
+export const WALK_TARGET_FPS_DEFAULT = 0.6
+export const WALK_TARGET_FPS_MIN = 0.3
+export const WALK_TARGET_FPS_MAX = 2
+
 export const ROUTES = {
   HOME: '/',
   DESCRIBE: '/describe',
+  SESSION_MEMORY: '/session-memory',
   READ_WEB: '/read-web',
   READ_DOC: '/read-doc',
   SETTINGS: '/settings',

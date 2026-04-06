@@ -17,7 +17,7 @@ const MAIN_FLOAT =
   'rounded-[1.1rem] border border-[#2F3C4C] bg-[#161F2C] z-30 ' +
   'shadow-[0_24px_56px_rgba(2,7,16,0.56),0_12px_28px_rgba(2,8,17,0.4),inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-sm'
 
-const CHILD_CARD_HEIGHT = 'h-[11.5rem] sm:h-[12rem] lg:h-[12.5rem]'
+const CHILD_CARD_HEIGHT = 'min-h-[10.5rem] sm:h-[12rem] lg:h-[12.5rem]'
 
 const cardInner = 'flex flex-col h-full min-h-0 overflow-hidden'
 
@@ -36,14 +36,10 @@ export const LandingHero = () => {
 
   return (
     <section
-      id="features"
-      className="relative min-h-dvh overflow-hidden bg-[#0B121B] pt-20 sm:pt-24 lg:pt-24 pb-8 lg:pb-10"
+      id="home"
+      className="relative min-h-dvh overflow-hidden bg-[#0B121B] pt-20 sm:pt-24 lg:pt-24 pb-10 sm:pb-12 lg:pb-10"
       aria-label="Vision landing hero"
     >
-      <div
-        aria-hidden="true"
-        className="absolute inset-0 bg-[repeating-linear-gradient(90deg,rgba(47,60,76,0.2)_0,rgba(47,60,76,0.2)_52px,rgba(11,18,27,0.64)_52px,rgba(11,18,27,0.64)_116px)]"
-      />
       <div
         aria-hidden="true"
         className="absolute inset-0 bg-[radial-gradient(80%_76%_at_20%_12%,rgba(169,209,245,0.14)_0%,rgba(11,18,27,0)_66%)]"
@@ -54,15 +50,16 @@ export const LandingHero = () => {
       />
 
       <div className="relative z-10 max-w-[84rem] mx-auto px-5 sm:px-8 lg:px-14 xl:px-16">
-        <div id="technology" className="relative isolate grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-x-5 xl:gap-x-6 lg:items-start overflow-visible">
-          <div className="lg:col-span-6 flex flex-col gap-4 lg:gap-5 min-w-0 lg:pr-2 pt-3 sm:pt-4 lg:pt-8">
+        <div className="relative isolate grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-x-5 xl:gap-x-6 lg:items-start overflow-visible">
+          <div className="lg:col-span-6 flex flex-col gap-5 lg:gap-5 min-w-0 lg:pr-2 pt-3 sm:pt-4 lg:pt-8">
             <motion.h1
               {...reveal(0)}
-              className="font-display font-extrabold text-[#E9EEF4] text-3xl sm:text-4xl lg:text-[3rem] xl:text-[3.35rem] leading-[1.32] tracking-tight uppercase"
+              className="font-display font-extrabold text-[#E9EEF4] text-[2rem] sm:text-4xl lg:text-[3rem] xl:text-[3.35rem] leading-[1.2] sm:leading-[1.2] lg:leading-[1.14] tracking-tight uppercase"
             >
               <span className="block">Your World,</span>
-              <span className="block mt-3">Described.</span>
-              <span className="block mt-3">Beyond the Surface.</span>
+              <span className="block mt-2 sm:mt-2 lg:mt-1">Described.</span>
+              <span className="block mt-2 sm:mt-2 lg:mt-1">Beyond the</span>
+              <span className="block mt-2 sm:mt-2 lg:mt-1">Surface.</span>
             </motion.h1>
 
             <motion.p
@@ -75,7 +72,7 @@ export const LandingHero = () => {
             <div className="mt-1 flex flex-col sm:flex-row sm:items-stretch gap-3 sm:gap-4 relative overflow-visible lg:pr-6 xl:pr-8">
               <motion.article
                 {...reveal(0.12)}
-                className={`relative z-20 w-full max-w-[22rem] mx-auto sm:mx-0 sm:w-[41%] sm:max-w-[17rem] sm:shrink-0 ${CHILD_CARD_HEIGHT} ${CARD_BASE} p-4 sm:p-5 ${cardInner}`}
+                className={`relative z-20 w-full max-w-none sm:max-w-[17rem] sm:shrink-0 ${CHILD_CARD_HEIGHT} ${CARD_BASE} p-4 sm:p-5 ${cardInner}`}
               >
                 <div className="flex items-center gap-2.5 text-[#A9D1F5] shrink-0" aria-hidden="true">
                   <Smile className="w-5 h-5 sm:w-6 sm:h-6" strokeWidth={1.5} />
@@ -162,17 +159,9 @@ export const LandingHero = () => {
           </button>
         </motion.div>
 
-        <motion.div {...reveal(0.38)} className="mt-0 sm:mt-1 flex justify-end pr-0 sm:pr-0 lg:pr-1">
+        <motion.div {...reveal(0.38)} className="mt-1 sm:mt-1 flex justify-center sm:justify-end pr-0 sm:pr-0 lg:pr-1">
           <PwaFloating className="max-w-[220px] text-right pointer-events-auto -translate-y-2 sm:-translate-y-3 translate-x-3 sm:translate-x-4" />
         </motion.div>
-      </div>
-
-      <div id="about" className="sr-only" aria-hidden="true">
-        Vision about section anchor.
-      </div>
-
-      <div id="contact" className="sr-only" aria-hidden="true">
-        Vision contact section anchor.
       </div>
 
       <div className="absolute bottom-4 right-4 sm:right-8 z-20 pointer-events-none text-[#7A8B9B]" aria-hidden="true">

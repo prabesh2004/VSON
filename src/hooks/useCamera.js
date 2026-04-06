@@ -23,6 +23,8 @@ export const useCamera = () => {
   const [capturedDataUrl, setCapturedDataUrl] = useState(null)
   const [capturedBase64, setCapturedBase64] = useState(null)
   const streamRef = useRef(null)
+  const startTokenRef = useRef(0)
+  const mountedRef = useRef(true)
   const videoRef = useRef(null)
   const canvasRef = useRef(null)
 
@@ -32,12 +34,17 @@ export const useCamera = () => {
 
   useEffect(() => {
     return () => {
+      mountedRef.current = false
+      startTokenRef.current += 1
       stopTracks(streamRef.current)
       streamRef.current = null
     }
   }, [])
 
   const startCamera = useCallback(async () => {
+    const token = startTokenRef.current + 1
+    startTokenRef.current = token
+
     setError(null)
     setIsLoading(true)
     try {
@@ -49,6 +56,12 @@ export const useCamera = () => {
         video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
         audio: false,
       })
+
+      // If route changed or a newer start request exists, release this stream immediately.
+      if (!mountedRef.current || startTokenRef.current !== token) {
+        stopTracks(mediaStream)
+        return
+      }
 
       streamRef.current = mediaStream
       setStream(mediaStream)
@@ -66,8 +79,12 @@ export const useCamera = () => {
   }, [])
 
   const stopCamera = useCallback(() => {
+    startTokenRef.current += 1
     stopTracks(streamRef.current)
     streamRef.current = null
+    if (videoRef.current) {
+      videoRef.current.srcObject = null
+    }
     setStream(null)
     setCapturedDataUrl(null)
     setCapturedBase64(null)

@@ -7,6 +7,7 @@ import './index.css'
 import { AppRuntime } from '@/AppRuntime'
 import { Home } from '@/pages/Home'
 import { Describe } from '@/pages/Describe'
+import { SessionMemory } from '@/pages/SessionMemory'
 import { ReadWeb } from '@/pages/ReadWeb'
 import { ReadDoc } from '@/pages/ReadDoc'
 import { Settings } from '@/pages/Settings'
@@ -37,6 +38,7 @@ const routeErrorElement = <AppErrorFallback />
 const router = createBrowserRouter([
   { path: ROUTES.HOME, element: <Home />, errorElement: routeErrorElement },
   { path: ROUTES.DESCRIBE, element: <Describe />, errorElement: routeErrorElement },
+  { path: ROUTES.SESSION_MEMORY, element: <SessionMemory />, errorElement: routeErrorElement },
   { path: ROUTES.READ_WEB, element: <ReadWeb />, errorElement: routeErrorElement },
   { path: ROUTES.READ_DOC, element: <ReadDoc />, errorElement: routeErrorElement },
   { path: ROUTES.SETTINGS, element: <Settings />, errorElement: routeErrorElement },
