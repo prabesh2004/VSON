@@ -152,7 +152,7 @@ export const Settings = () => {
   }
 
   return (
-    <main id="main-content" className="min-h-dvh bg-[#0B121B] px-4 py-6 max-w-lg mx-auto flex flex-col gap-6">
+    <main id="main-content" className="min-h-dvh bg-[#0B121B] px-4 py-6 max-w-2xl mx-auto flex flex-col gap-6">
       <header className="flex items-center gap-4">
         <Button
           variant="ghost"
@@ -173,7 +173,7 @@ export const Settings = () => {
             <legend className="font-display font-semibold text-[#E9EEF4] text-base mb-4">
               Font Size
             </legend>
-            <div className="flex gap-3" role="group" aria-label="Select font size">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3" role="group" aria-label="Select font size">
               {FONT_SIZES.map((size) => (
                 <button
                   key={size}
@@ -204,7 +204,7 @@ export const Settings = () => {
             <legend className="font-display font-semibold text-[#E9EEF4] text-base mb-4">
               Scene Description Detail
             </legend>
-            <div className="flex gap-3" role="group" aria-label="Select scene description detail level">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3" role="group" aria-label="Select scene description detail level">
               {DETAIL_LEVELS.map((level) => (
                 <button
                   key={level}

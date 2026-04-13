@@ -55,7 +55,7 @@ export const WebReader = memo(
             <label htmlFor="web-url" className="text-sm font-body font-medium text-[#7A8B9B]">
               Website URL
             </label>
-            <div className="flex gap-3">
+            <div className="flex flex-col sm:flex-row gap-3">
               <input
                 id="web-url"
                 type="url"
@@ -74,6 +74,7 @@ export const WebReader = memo(
               />
               <Button
                 type="submit"
+                className="w-full sm:w-auto"
                 disabled={!isConnected}
                 isLoading={isPending}
                 leftIcon={<Globe size={18} aria-hidden="true" />}

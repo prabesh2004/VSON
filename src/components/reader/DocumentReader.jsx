@@ -82,6 +82,7 @@ export const DocumentReader = memo(
           />
           <Button
             variant="secondary"
+            className="w-full sm:w-auto max-w-full truncate"
             disabled={!isConnected || isPending}
             leftIcon={<Upload size={18} aria-hidden="true" />}
             onClick={() => fileRef.current?.click()}
@@ -109,7 +110,7 @@ export const DocumentReader = memo(
           <div className="flex flex-col gap-4">
             <TextDisplay text={data.text} title={data.title} />
 
-            <div className="flex items-center justify-between gap-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <Button
                 variant="ghost"
                 leftIcon={<ChevronLeft size={18} aria-hidden="true" />}
@@ -122,7 +123,7 @@ export const DocumentReader = memo(
 
               <span
                 aria-live="polite"
-                className="text-[#7A8B9B] font-body text-sm"
+                className="order-first w-full text-center sm:order-none sm:w-auto text-[#7A8B9B] font-body text-sm"
               >
                 Page {data.current_page} of {data.total_pages}
               </span>

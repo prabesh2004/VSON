@@ -1,6 +1,6 @@
 import { useEffect, useRef, useCallback, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Activity, ArrowLeft, BrainCircuit, Camera, CircleHelp, LogOut, Pause, Play, RefreshCw, Square, Volume2, VolumeX, Wifi, WifiOff } from 'lucide-react'
+import { Activity, BrainCircuit, Camera, CircleHelp, LogOut, Pause, Play, RefreshCw, Square, Volume2, VolumeX, Wifi, WifiOff } from 'lucide-react'
 import { motion, useReducedMotion } from 'framer-motion'
 import { FramePreview } from '@/components/camera/FramePreview'
 import { VoiceButton } from '@/components/voice/VoiceButton'
@@ -411,56 +411,23 @@ export const Describe = () => {
   const activeDescription = walkLatestDescription || data?.description
 
   return (
-    <main id="main-content" className="relative min-h-dvh bg-[#0B121B] px-3 py-5 sm:px-6 sm:py-6 lg:px-8">
+    <main id="main-content" className="relative min-h-dvh bg-[#0B121B] px-3 py-4 sm:px-6 sm:py-6 lg:px-8">
       <div className="pointer-events-none absolute inset-0 overflow-hidden -z-10" aria-hidden="true">
         <div className="absolute -top-24 -left-20 h-80 w-80 rounded-full bg-[#1c2f44]/45 blur-3xl" />
         <div className="absolute top-1/3 -right-24 h-96 w-96 rounded-full bg-[#13314a]/30 blur-3xl" />
       </div>
 
       <div className="mx-auto max-w-7xl">
-        <header className="mb-5 sm:mb-6 flex flex-wrap items-start sm:items-center justify-between gap-4">
-          <div className="flex items-start sm:items-center gap-3 min-w-0">
-            <Button
-              variant="ghost"
-              size="sm"
-              leftIcon={<ArrowLeft size={18} aria-hidden="true" />}
-              onClick={() => navigate(-1)}
-              ariaLabel="Go back to home"
-            >
-              Back
-            </Button>
+        <header className="mb-5 sm:mb-6 flex flex-wrap items-start sm:items-center justify-between gap-2 sm:gap-4">
+          <div className="w-full flex items-start justify-between gap-3 min-w-0">
             <div className="min-w-0">
-              <h1 className="font-display text-xl sm:text-3xl font-semibold text-[#E9EEF4] leading-tight">Scene Dashboard</h1>
+              <h1 className="font-display text-xl sm:text-3xl font-semibold text-[#E9EEF4] leading-tight">Dashboard</h1>
               <p className="font-body text-xs sm:text-sm text-[#7A8B9B] mt-1 leading-relaxed">
                 Capture, describe, and replay context from one workspace.
               </p>
             </div>
-          </div>
 
-          <div className="w-full sm:w-auto flex flex-wrap items-center gap-2">
-            <Badge variant={isConnected ? 'secondary' : 'destructive'} className="h-7 gap-1 px-2.5">
-              {isConnected ? <Wifi size={12} aria-hidden="true" /> : <WifiOff size={12} aria-hidden="true" />}
-              {isConnected ? 'Online' : 'Offline'}
-            </Badge>
-            <Badge variant="outline" className="h-7 gap-1 px-2.5">
-              <BrainCircuit size={12} aria-hidden="true" />
-              {detailLevel}
-            </Badge>
-            <Badge variant="outline" className="h-7 gap-1 px-2.5">
-              <Activity size={12} aria-hidden="true" />
-              Walk: {walkModeLabel}
-            </Badge>
-            <Button
-              variant="secondary"
-              size="sm"
-              className="w-full sm:w-auto"
-              onClick={() => navigate(ROUTES.SESSION_MEMORY)}
-              ariaLabel="Open session memory page"
-            >
-              Session Memory ({sceneHistory.length})
-            </Button>
-
-            <div ref={accountMenuRef} className="relative ml-auto sm:ml-0 flex items-center justify-center">
+            <div ref={accountMenuRef} className="relative flex items-center justify-center shrink-0">
               <button
                 type="button"
                 onClick={() => setIsAccountMenuOpen((open) => !open)}
@@ -483,7 +450,7 @@ export const Describe = () => {
               </button>
 
               {isAccountMenuOpen && (
-                <div className="absolute right-0 mt-2 min-w-[130px] rounded-lg border border-[#2F3C4C] bg-[#161F2C] p-2 shadow-xl z-20">
+                <div className="absolute right-0 mt-2 min-w-[130px] max-w-[calc(100vw-2rem)] rounded-lg border border-[#2F3C4C] bg-[#161F2C] p-2 shadow-xl z-20">
                   <Button
                     variant="danger"
                     size="sm"
@@ -498,9 +465,36 @@ export const Describe = () => {
               )}
             </div>
           </div>
+
+          <div className="w-full sm:w-auto flex flex-col items-stretch sm:items-end gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant={isConnected ? 'secondary' : 'destructive'} className="h-7 gap-1 px-2.5">
+                {isConnected ? <Wifi size={12} aria-hidden="true" /> : <WifiOff size={12} aria-hidden="true" />}
+                {isConnected ? 'Online' : 'Offline'}
+              </Badge>
+              <Badge variant="outline" className="h-7 gap-1 px-2.5">
+                <BrainCircuit size={12} aria-hidden="true" />
+                {detailLevel}
+              </Badge>
+              <Badge variant="outline" className="h-7 gap-1 px-2.5">
+                <Activity size={12} aria-hidden="true" />
+                Walk: {walkModeLabel}
+              </Badge>
+            </div>
+
+            <Button
+              variant="secondary"
+              size="sm"
+              className="w-full sm:w-auto"
+              onClick={() => navigate(ROUTES.SESSION_MEMORY)}
+              ariaLabel="Open session memory page"
+            >
+              Session Memory ({sceneHistory.length})
+            </Button>
+          </div>
         </header>
 
-        <section className="grid gap-6 lg:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
+        <section className="grid gap-6 md:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
           <div className="space-y-6">
             <Card className="p-0 overflow-hidden">
               <div className="border-b border-[#2F3C4C] bg-[linear-gradient(135deg,#192739_0%,#121d2b_100%)] p-4 sm:p-5">
@@ -558,7 +552,7 @@ export const Describe = () => {
                 </div>
 
                 <div className="rounded-xl border border-[#2F3C4C] bg-[#0B121B]/70 p-2.5">
-                  <div className="flex flex-wrap items-center gap-2.5">
+                  <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2.5">
                     <Button
                       variant={stream ? 'secondary' : 'primary'}
                       size="sm"

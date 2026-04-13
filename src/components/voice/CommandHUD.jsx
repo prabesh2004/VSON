@@ -59,7 +59,7 @@ export const CommandHUD = memo(
                 aria-hidden="true"
                 className={['w-2 h-2 rounded-full flex-shrink-0', dotClass].join(' ')}
               />
-              <p className="text-[#E9EEF4] font-body text-sm font-medium truncate max-w-xs">
+              <p className="text-[#E9EEF4] font-body text-sm font-medium truncate max-w-[calc(100vw-96px)] sm:max-w-xs">
                 {displayText}
               </p>
             </motion.div>

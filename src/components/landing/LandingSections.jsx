@@ -116,7 +116,7 @@ export const LandingSections = () => {
           <div className="mt-8 grid gap-5 sm:gap-6 lg:grid-cols-[1.35fr_1fr] items-start">
             <div className="space-y-4">
               <motion.div {...reveal(0.04)}>
-                <Card className="p-0 overflow-hidden self-start min-h-[20rem] sm:min-h-[23rem]">
+                <Card className="p-0 overflow-hidden self-start min-h-[16rem] sm:min-h-[20rem] lg:min-h-[23rem]">
                   <div className="p-4 sm:p-5 border-b border-[#2F3C4C] bg-[linear-gradient(130deg,#1a2838_0%,#111b29_100%)]">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <h3 className="font-display text-lg text-[#E9EEF4] font-semibold">Dashboard Preview</h3>
@@ -127,7 +127,7 @@ export const LandingSections = () => {
                     </div>
                   </div>
 
-                  <div className="p-4 sm:p-5 grid gap-3 sm:gap-4 sm:grid-cols-2">
+                  <div className="p-4 sm:p-5 grid gap-3 sm:gap-4 md:grid-cols-2">
                     <div className="rounded-xl border border-[#2F3C4C] bg-[#0B121B] p-4">
                       <p className="font-body text-[11px] uppercase tracking-wide text-[#7A8B9B]">Loop Health</p>
                       <p className="font-display text-2xl text-[#E9EEF4] mt-2">Stable</p>

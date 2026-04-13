@@ -78,7 +78,7 @@ export const Modal = memo(
               exit={prefersReduced ? {} : { scale: 0.95, opacity: 0 }}
               transition={{ duration: 0.15 }}
               className={[
-                'relative bg-[#161F2C] rounded-2xl shadow-2xl w-full max-w-lg max-h-[90dvh] overflow-y-auto',
+                'relative bg-[#161F2C] rounded-2xl shadow-2xl w-full max-w-lg max-h-[min(90dvh,calc(100dvh-48px))] overflow-y-auto',
                 className,
               ].join(' ')}
             >
@@ -93,7 +93,7 @@ export const Modal = memo(
                   ref={firstFocusableRef}
                   onClick={onClose}
                   aria-label="Close modal"
-                  className="p-2 rounded-lg text-[#7A8B9B] hover:text-[#E9EEF4] hover:bg-[#A9D1F5]/10 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#A9D1F5]"
+                  className="p-2.5 rounded-lg text-[#7A8B9B] hover:text-[#E9EEF4] hover:bg-[#A9D1F5]/10 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#A9D1F5]"
                 >
                   <X size={20} aria-hidden="true" />
                 </button>

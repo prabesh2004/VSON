@@ -54,7 +54,7 @@ export const SessionMemoryPanel = memo(
               No memory captured yet. Describe a scene to start building context.
             </p>
           ) : (
-            <ul className="space-y-3 max-h-[26rem] overflow-auto pr-1" role="list" aria-label="Recent scene descriptions">
+            <ul className="space-y-3 max-h-[min(26rem,calc(100dvh-300px))] overflow-auto pr-1" role="list" aria-label="Recent scene descriptions">
               {entries.map((entry, index) => (
                 <li key={entry.id} className="rounded-xl border border-[#2F3C4C] bg-[#0B121B] p-3">
                   <div className="flex items-center justify-between gap-2">

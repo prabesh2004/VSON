@@ -1,7 +1,7 @@
+import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, useReducedMotion } from 'framer-motion'
-import { Handshake, Mic, Smile, Sparkles } from 'lucide-react'
-import { PwaFloating } from '@/components/landing/PwaFloating'
+import { Handshake, Mic, Smile } from 'lucide-react'
 import { VoiceWaveform } from '@/components/landing/VoiceWaveform'
 import mainImage from '@/images/main.png'
 import { ROUTES } from '@/lib/constants'
@@ -17,13 +17,41 @@ const MAIN_FLOAT =
   'rounded-[1.1rem] border border-[#2F3C4C] bg-[#161F2C] z-30 ' +
   'shadow-[0_24px_56px_rgba(2,7,16,0.56),0_12px_28px_rgba(2,8,17,0.4),inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-sm'
 
-const CHILD_CARD_HEIGHT = 'min-h-[10.5rem] sm:h-[12rem] lg:h-[12.5rem]'
+const CHILD_CARD_HEIGHT = 'min-h-[10.5rem] sm:min-h-[12rem] lg:min-h-[12.5rem]'
 
 const cardInner = 'flex flex-col h-full min-h-0 overflow-hidden'
 
 export const LandingHero = () => {
   const navigate = useNavigate()
   const prefersReducedMotion = useReducedMotion()
+  const [deferredPrompt, setDeferredPrompt] = useState(null)
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (event) => {
+      event.preventDefault()
+      setDeferredPrompt(event)
+    }
+
+    const handleAppInstalled = () => {
+      setDeferredPrompt(null)
+    }
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+    window.addEventListener('appinstalled', handleAppInstalled)
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+      window.removeEventListener('appinstalled', handleAppInstalled)
+    }
+  }, [])
+
+  const handleInstallPwa = useCallback(async () => {
+    if (!deferredPrompt) return
+
+    deferredPrompt.prompt()
+    await deferredPrompt.userChoice
+    setDeferredPrompt(null)
+  }, [deferredPrompt])
 
   const reveal = (delay = 0) =>
     prefersReducedMotion
@@ -37,7 +65,7 @@ export const LandingHero = () => {
   return (
     <section
       id="home"
-      className="relative min-h-dvh overflow-hidden bg-[#0B121B] pt-20 sm:pt-24 lg:pt-24 pb-10 sm:pb-12 lg:pb-10"
+      className="relative min-h-dvh overflow-hidden bg-[#0B121B] pt-16 sm:pt-20 lg:pt-24 pb-10 sm:pb-12 lg:pb-10"
       aria-label="Vision landing hero"
     >
       <div
@@ -56,10 +84,11 @@ export const LandingHero = () => {
               {...reveal(0)}
               className="font-display font-extrabold text-[#E9EEF4] text-[2rem] sm:text-4xl lg:text-[3rem] xl:text-[3.35rem] leading-[1.2] sm:leading-[1.2] lg:leading-[1.14] tracking-tight uppercase"
             >
-              <span className="block">Your World,</span>
-              <span className="block mt-2 sm:mt-2 lg:mt-1">Described.</span>
-              <span className="block mt-2 sm:mt-2 lg:mt-1">Beyond the</span>
-              <span className="block mt-2 sm:mt-2 lg:mt-1">Surface.</span>
+              <span className="block sm:hidden">Your World, Described. Beyond the Surface.</span>
+              <span className="hidden sm:block">Your World,</span>
+              <span className="hidden sm:block mt-2 sm:mt-2 lg:mt-1">Described.</span>
+              <span className="hidden sm:block mt-2 sm:mt-2 lg:mt-1">Beyond the</span>
+              <span className="hidden sm:block mt-2 sm:mt-2 lg:mt-1">Surface.</span>
             </motion.h1>
 
             <motion.p
@@ -69,42 +98,28 @@ export const LandingHero = () => {
               An AI that remembers your surroundings and reads social cues for running context, not isolated snapshots.
             </motion.p>
 
-            <div className="mt-1 flex flex-col sm:flex-row sm:items-stretch gap-3 sm:gap-4 relative overflow-visible lg:pr-6 xl:pr-8">
-              <motion.article
-                {...reveal(0.12)}
-                className={`relative z-20 w-full max-w-none sm:max-w-[17rem] sm:shrink-0 ${CHILD_CARD_HEIGHT} ${CARD_BASE} p-4 sm:p-5 ${cardInner}`}
+            <motion.div {...reveal(0.12)} className="mt-1 grid grid-cols-2 gap-3 sm:gap-4 relative overflow-visible lg:pr-6 xl:pr-8">
+              <button
+                type="button"
+                onClick={() => navigate(ROUTES.DESCRIBE)}
+                className="w-full font-body font-semibold text-xs sm:text-base text-[#0B121B] bg-[#A9D1F5] hover:bg-[#93c4ef] px-3 sm:px-8 py-3 rounded-lg transition-colors min-h-touch shadow-[0_10px_22px_rgba(12,46,82,0.26)] focus-visible:ring-2 focus-visible:ring-[#A9D1F5] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0B121B]"
+                aria-label="Get started with Vision for free"
               >
-                <div className="flex items-center gap-2.5 text-[#A9D1F5] shrink-0" aria-hidden="true">
-                  <Smile className="w-5 h-5 sm:w-6 sm:h-6" strokeWidth={1.5} />
-                  <Handshake className="w-5 h-5 sm:w-6 sm:h-6" strokeWidth={1.5} />
-                </div>
-                <h3 className="mt-2 font-display font-bold text-[#E9EEF4] text-xs sm:text-sm leading-snug shrink-0 uppercase tracking-[0.01em]">
-                  Social &amp; Emotional Cues
-                </h3>
-                <p className="mt-1.5 sm:mt-2 font-body text-[#7A8B9B] text-xs sm:text-sm leading-relaxed flex-1 min-h-0 overflow-hidden line-clamp-2 sm:line-clamp-3">
-                  Describes not just objects, but human expressions and interpersonal situations.
-                </p>
-              </motion.article>
-
-              <motion.article
-                {...reveal(0.16)}
-                className={`relative z-10 flex-1 min-w-0 w-full ${CHILD_CARD_HEIGHT} ${CARD_BASE} p-4 sm:p-5 ${cardInner} lg:min-w-[26rem] lg:translate-x-9 xl:translate-x-12`}
+                GET STARTED FREE
+              </button>
+              <button
+                type="button"
+                onClick={handleInstallPwa}
+                disabled={!deferredPrompt}
+                className="w-full font-body font-semibold text-xs sm:text-base text-[#E9EEF4] border border-[#2F3C4C] bg-[#161F2C]/70 hover:border-[#7A8B9B] hover:bg-[#161F2C] px-3 sm:px-8 py-3 rounded-lg transition-colors min-h-touch focus-visible:ring-2 focus-visible:ring-[#A9D1F5] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0B121B] disabled:opacity-50 disabled:cursor-not-allowed"
+                aria-label="Install Vision as a PWA"
               >
-                <div className="flex items-end gap-2 sm:gap-3 shrink-0 min-h-0" aria-hidden="true">
-                  <Mic className="w-5 h-5 sm:w-6 sm:h-6 text-[#E9EEF4] shrink-0" strokeWidth={1.5} />
-                  <VoiceWaveform className="h-6 sm:h-7 w-full max-w-none min-w-0 flex-1" />
-                </div>
-                <h3 className="mt-2 font-display font-bold text-[#E9EEF4] text-xs sm:text-sm leading-snug shrink-0 uppercase tracking-[0.01em]">
-                  Voice-First Interface
-                </h3>
-                <p className="mt-1.5 sm:mt-2 font-body text-[#7A8B9B] text-xs sm:text-sm leading-relaxed flex-1 min-h-0 overflow-hidden line-clamp-3">
-                  Real-time scene descriptions generated through voice command.
-                </p>
-              </motion.article>
-            </div>
+                INSTALL PWA
+              </button>
+            </motion.div>
           </div>
 
-          <div className="lg:col-span-6 relative flex justify-center lg:justify-end min-w-0 overflow-visible pt-0 lg:pt-5">
+          <div className="order-2 lg:order-none lg:col-span-6 relative flex justify-center lg:justify-end min-w-0 overflow-visible pt-0 lg:pt-5">
             <div className="relative w-full max-w-[33rem]">
               <motion.div
                 {...reveal(0.04)}
@@ -114,7 +129,7 @@ export const LandingHero = () => {
 
               <motion.article
                 {...reveal(0.08)}
-                className={`relative w-full lg:w-[min(100%,28.5rem)] xl:w-[min(100%,30rem)] flex flex-col p-4 sm:p-5 lg:p-6 overflow-hidden ${MAIN_FLOAT} ${prefersReducedMotion ? '' : 'lg:-translate-x-14 xl:-translate-x-16 lg:translate-y-1'}`}
+                className={`relative w-full lg:w-[min(100%,28.5rem)] xl:w-[min(100%,30rem)] flex flex-col p-4 sm:p-5 lg:p-6 overflow-hidden ${MAIN_FLOAT} ${prefersReducedMotion ? '' : 'md:translate-x-0 lg:-translate-x-14 xl:-translate-x-16 lg:translate-y-1'}`}
               >
                 <div className={cardInner}>
                   <div className="rounded-[0.95rem] border border-[#2F3C4C] overflow-hidden bg-[#0B121B] shrink-0 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
@@ -138,34 +153,43 @@ export const LandingHero = () => {
               </motion.article>
             </div>
           </div>
+
+          <div className="order-3 lg:order-none lg:col-span-6 mt-2">
+            <div className="flex flex-col sm:flex-row sm:items-stretch gap-3 sm:gap-4 relative overflow-visible lg:pr-6 xl:pr-8">
+              <motion.article
+                {...reveal(0.16)}
+                className={`relative z-20 w-full max-w-none sm:max-w-[17rem] sm:shrink-0 ${CHILD_CARD_HEIGHT} ${CARD_BASE} p-4 sm:p-5 ${cardInner}`}
+              >
+                <div className="flex items-center gap-2.5 text-[#A9D1F5] shrink-0" aria-hidden="true">
+                  <Smile className="w-5 h-5 sm:w-6 sm:h-6" strokeWidth={1.5} />
+                  <Handshake className="w-5 h-5 sm:w-6 sm:h-6" strokeWidth={1.5} />
+                </div>
+                <h3 className="mt-2 font-display font-bold text-[#E9EEF4] text-xs sm:text-sm leading-snug shrink-0 uppercase tracking-[0.01em]">
+                  Social &amp; Emotional Cues
+                </h3>
+                <p className="mt-1.5 sm:mt-2 font-body text-[#7A8B9B] text-xs sm:text-sm leading-relaxed flex-1 min-h-0 overflow-hidden line-clamp-2 sm:line-clamp-3">
+                  Describes not just objects, but human expressions and interpersonal situations.
+                </p>
+              </motion.article>
+
+              <motion.article
+                {...reveal(0.2)}
+                className={`relative z-10 flex-1 min-w-0 w-full ${CHILD_CARD_HEIGHT} ${CARD_BASE} p-4 sm:p-5 ${cardInner} lg:min-w-[min(100%,26rem)] md:translate-x-0 lg:translate-x-9 xl:translate-x-12`}
+              >
+                <div className="flex items-end gap-2 sm:gap-3 shrink-0 min-h-0" aria-hidden="true">
+                  <Mic className="w-5 h-5 sm:w-6 sm:h-6 text-[#E9EEF4] shrink-0" strokeWidth={1.5} />
+                  <VoiceWaveform className="h-6 sm:h-7 w-full max-w-none min-w-0 flex-1" />
+                </div>
+                <h3 className="mt-2 font-display font-bold text-[#E9EEF4] text-xs sm:text-sm leading-snug shrink-0 uppercase tracking-[0.01em]">
+                  Voice-First Interface
+                </h3>
+                <p className="mt-1.5 sm:mt-2 font-body text-[#7A8B9B] text-xs sm:text-sm leading-relaxed flex-1 min-h-0 overflow-hidden line-clamp-3">
+                  Real-time scene descriptions generated through voice command.
+                </p>
+              </motion.article>
+            </div>
+          </div>
         </div>
-
-        <motion.div {...reveal(0.32)} className="mt-6 sm:mt-7 lg:mt-8 flex flex-wrap justify-center gap-3 sm:gap-4">
-          <button
-            type="button"
-            onClick={() => navigate(ROUTES.DESCRIBE)}
-            className="font-body font-semibold text-sm sm:text-base text-[#0B121B] bg-[#A9D1F5] hover:bg-[#93c4ef] px-7 sm:px-8 py-3 rounded-lg transition-colors min-h-touch shadow-[0_10px_22px_rgba(12,46,82,0.26)] focus-visible:ring-2 focus-visible:ring-[#A9D1F5] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0B121B]"
-            aria-label="Get started with Vision for free"
-          >
-            GET STARTED FREE
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate(ROUTES.DESCRIBE)}
-            className="font-body font-semibold text-sm sm:text-base text-[#E9EEF4] border border-[#2F3C4C] bg-[#161F2C]/70 hover:border-[#7A8B9B] hover:bg-[#161F2C] px-7 sm:px-8 py-3 rounded-lg transition-colors min-h-touch focus-visible:ring-2 focus-visible:ring-[#A9D1F5] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0B121B]"
-            aria-label="Explore the Vision demo"
-          >
-            EXPLORE DEMO
-          </button>
-        </motion.div>
-
-        <motion.div {...reveal(0.38)} className="mt-1 sm:mt-1 flex justify-center sm:justify-end pr-0 sm:pr-0 lg:pr-1">
-          <PwaFloating className="max-w-[220px] text-right pointer-events-auto -translate-y-2 sm:-translate-y-3 translate-x-3 sm:translate-x-4" />
-        </motion.div>
-      </div>
-
-      <div className="absolute bottom-4 right-4 sm:right-8 z-20 pointer-events-none text-[#7A8B9B]" aria-hidden="true">
-        <Sparkles className="w-6 h-6 sm:w-7 sm:h-7" strokeWidth={1.25} />
       </div>
     </section>
   )

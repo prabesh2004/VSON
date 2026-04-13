@@ -26,7 +26,7 @@ export const Navbar = () => {
       role="banner"
     >
       <nav
-        className="max-w-[90rem] mx-auto px-4 sm:px-6 lg:px-10 h-16 sm:h-[4.25rem] flex items-center"
+        className="max-w-[90rem] mx-auto px-4 sm:px-6 lg:px-10 h-16 sm:h-16 flex items-center"
         aria-label="Main navigation"
       >
         <motion.a
@@ -71,7 +71,7 @@ export const Navbar = () => {
         </motion.ul>
 
         <motion.div
-          className="flex items-center gap-2 md:ml-4"
+          className="ml-auto flex items-center gap-2 md:ml-4"
           initial={prefersReduced ? {} : { opacity: 0, x: 12 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.4, delay: 0.12 }}
@@ -99,7 +99,7 @@ export const Navbar = () => {
 
       {menuOpen && (
         <motion.div
-          className="md:hidden bg-[#0B121B]/98 backdrop-blur-xl border-t border-[#2F3C4C] px-4 sm:px-6 py-4 flex flex-col gap-3 max-h-[65dvh] overflow-y-auto"
+          className="md:hidden bg-[#0B121B]/98 backdrop-blur-xl border-t border-[#2F3C4C] px-4 sm:px-6 py-4 flex flex-col gap-3 max-h-[min(65dvh,400px)] overflow-y-auto"
           initial={prefersReduced ? {} : { opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.2 }}
