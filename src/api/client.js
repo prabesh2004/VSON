@@ -8,9 +8,26 @@ const client = axios.create({
   },
 })
 
+client.interceptors.request.use((config) => {
+  const method = (config.method ?? 'get').toUpperCase()
+  const url = config.url ?? ''
+  console.info(`[API] ${method} ${url} called`)
+  return config
+})
+
 client.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    const method = (response.config?.method ?? 'get').toUpperCase()
+    const url = response.config?.url ?? ''
+    console.info(`[API] ${method} ${url} success (${response.status})`)
+    return response
+  },
   (error) => {
+    const method = (error.config?.method ?? 'get').toUpperCase()
+    const url = error.config?.url ?? ''
+    const statusCode = error.response?.status ?? 0
+    console.info(`[API] ${method} ${url} failed (${statusCode})`)
+
     const message =
       error.response?.data?.message ??
       error.response?.data?.error ??

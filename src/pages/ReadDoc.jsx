@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, CircleHelp } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
@@ -16,6 +16,7 @@ export const ReadDoc = () => {
   const [voiceAction, setVoiceAction] = useState(null)
   const [isHelpOpen, setIsHelpOpen] = useState(false)
   const [hasDocument, setHasDocument] = useState(false)
+  const stopListeningRef = useRef(() => {})
 
   const handleReadAloud = useCallback(
     (text, title) => {
@@ -31,6 +32,11 @@ export const ReadDoc = () => {
   const handleCommand = (command) => {
     if (command === 'stop') {
       stopSpeaking()
+      return true
+    }
+
+    if (command === 'stop mic') {
+      stopListeningRef.current()
       return true
     }
 
@@ -58,7 +64,11 @@ export const ReadDoc = () => {
     return false
   }
 
-  const { toggleListening } = useVoiceCommand({ onCommand: handleCommand })
+  const { toggleListening, stopListening } = useVoiceCommand({ onCommand: handleCommand })
+
+  useEffect(() => {
+    stopListeningRef.current = stopListening
+  }, [stopListening])
 
   return (
     <main id="main-content" className="min-h-dvh bg-[#0B121B] px-4 py-6 max-w-lg mx-auto flex flex-col gap-6">

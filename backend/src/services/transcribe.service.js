@@ -15,14 +15,23 @@ const uniqueProviderOrder = (primary, fallbacks) => {
  * @returns {Promise<{ transcript: string, confidence: number }>}
  */
 export const transcribeVoice = async ({ audioBuffer, mimeType }) => {
-  const providers = uniqueProviderOrder(env.sttProvider, env.sttFallbackProviders)
+  const allowMockFallback = env.nodeEnv === 'development' && Boolean(env.sttMockTranscript?.trim())
+  const providers = uniqueProviderOrder(env.sttProvider, env.sttFallbackProviders).filter((providerName, index) => {
+    if (providerName !== 'mock') return true
+    if (index === 0) return true
+    return allowMockFallback
+  })
   const failures = []
 
   for (const providerName of providers) {
     try {
+      console.info('[STT] Trying provider:', providerName)
       const provider = getSttProviderByName(providerName)
-      return await provider.transcribeAudio({ audioBuffer, mimeType })
+      const result = await provider.transcribeAudio({ audioBuffer, mimeType })
+      console.info('[STT] Provider succeeded:', providerName)
+      return result
     } catch (error) {
+      console.info('[STT] Provider failed:', providerName, error.message)
       failures.push(`${providerName}: ${error.message}`)
     }
   }

@@ -24,24 +24,19 @@ const cardInner = 'flex flex-col h-full min-h-0 overflow-hidden'
 export const LandingHero = () => {
   const navigate = useNavigate()
   const prefersReducedMotion = useReducedMotion()
-  const [deferredPrompt, setDeferredPrompt] = useState(null)
+  const [deferredPrompt, setDeferredPrompt] = useState(
+    typeof window !== 'undefined' ? window.__visionDeferredPrompt ?? null : null
+  )
 
   useEffect(() => {
-    const handleBeforeInstallPrompt = (event) => {
-      event.preventDefault()
-      setDeferredPrompt(event)
+    const syncDeferredPrompt = () => {
+      setDeferredPrompt(window.__visionDeferredPrompt ?? null)
     }
 
-    const handleAppInstalled = () => {
-      setDeferredPrompt(null)
-    }
-
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
-    window.addEventListener('appinstalled', handleAppInstalled)
+    window.addEventListener('vision:pwa-installability-changed', syncDeferredPrompt)
 
     return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
-      window.removeEventListener('appinstalled', handleAppInstalled)
+      window.removeEventListener('vision:pwa-installability-changed', syncDeferredPrompt)
     }
   }, [])
 
@@ -50,6 +45,7 @@ export const LandingHero = () => {
 
     deferredPrompt.prompt()
     await deferredPrompt.userChoice
+    window.__visionDeferredPrompt = null
     setDeferredPrompt(null)
   }, [deferredPrompt])
 

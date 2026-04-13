@@ -7,8 +7,6 @@ const browserSTTAvailable =
   typeof window !== 'undefined' &&
   ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)
 
-const configuredSttMode = (import.meta.env.VITE_STT_MODE ?? 'backend-first').toLowerCase()
-
 const normalizeTranscript = (value) =>
   value
     .toLowerCase()
@@ -26,6 +24,7 @@ const COMMAND_ALIASES = [
   { command: 'pause walk mode', patterns: ['pause walk mode', 'pause walk', 'pause mode'] },
   { command: 'resume walk mode', patterns: ['resume walk mode', 'resume walk', 'continue walk mode'] },
   { command: 'stop walk mode', patterns: ['stop walk mode', 'end walk mode', 'stop walk'] },
+  { command: 'stop mic', patterns: ['stop mic', 'stop microphone', 'mute mic', 'mute microphone'] },
   { command: 'settings', patterns: ['settings', 'open settings'] },
   { command: 'go back', patterns: ['go back', 'back'] },
   { command: 'repeat', patterns: ['repeat', 'say again', 'read again'] },
@@ -39,23 +38,24 @@ const findCommandInTranscript = (transcriptText) => {
   if (!normalized) return null
   const words = normalized.split(' ').filter(Boolean)
 
-  const hasWordPrefix = (prefix) => words.some((word) => word.startsWith(prefix))
+  const hasWord = (...tokens) => words.some((word) => tokens.includes(word))
   const hasApproxHelp = words.some((word) => /^h[ea]lp/.test(word))
-
-  if (hasWordPrefix('describ')) {
-    if (normalized.includes('detail') || normalized.includes('detailed')) return 'describe in detail'
-    return 'describe'
-  }
-
-  if (hasWordPrefix('captur') || (normalized.includes('take') && normalized.includes('picture'))) {
-    return 'capture'
-  }
 
   if (hasApproxHelp) return 'help'
   if (normalized.includes('tutorial') || normalized.includes('how to use')) return 'tutorial'
   if (normalized.includes('setting')) return 'settings'
   if (normalized.includes('go back') || words.includes('back')) return 'go back'
-  if (hasWordPrefix('repeat') || normalized.includes('again')) return 'repeat'
+  if (hasWord('repeat', 'again') || normalized.includes('say again') || normalized.includes('read again')) return 'repeat'
+
+  if (hasWord('describe', 'described')) {
+    if (normalized.includes('detail') || normalized.includes('detailed')) return 'describe in detail'
+    return 'describe'
+  }
+
+  if (hasWord('capture', 'captured') || (normalized.includes('take') && normalized.includes('picture'))) {
+    return 'capture'
+  }
+
   if (normalized.includes('walk') && normalized.includes('mode') && !normalized.includes('start') && !normalized.includes('pause') && !normalized.includes('resume') && !normalized.includes('continue') && !normalized.includes('stop')) {
     return 'walk mode'
   }
@@ -65,6 +65,8 @@ const findCommandInTranscript = (transcriptText) => {
   if ((normalized.includes('resume') || normalized.includes('continue')) && normalized.includes('walk'))
     return 'resume walk mode'
   if (normalized.includes('stop') && normalized.includes('walk')) return 'stop walk mode'
+  if (normalized.includes('stop') && (normalized.includes('mic') || normalized.includes('microphone')))
+    return 'stop mic'
   if (normalized.includes('stop')) return 'stop'
 
   for (const alias of COMMAND_ALIASES) {
@@ -106,19 +108,15 @@ export const useVoiceCommand = ({ onCommand }) => {
 
   const recognitionRef = useRef(null)
   const keepListeningRef = useRef(false)
-  const commandHandledRef = useRef(false)
-  const listenTimeoutRef = useRef(null)
+  const lastHandledCommandRef = useRef(null)
+  const lastHandledAtRef = useRef(0)
   const recorderAutoStopRef = useRef(null)
   const networkErrorCountRef = useRef(0)
+  const shouldUseFallbackRef = useRef(false)
+  const fallbackLoopActiveRef = useRef(false)
+  const startFallbackRef = useRef(() => {})
   const mediaRecorderRef = useRef(null)
   const chunksRef = useRef([])
-
-  const clearListenTimeout = useCallback(() => {
-    if (listenTimeoutRef.current) {
-      clearTimeout(listenTimeoutRef.current)
-      listenTimeoutRef.current = null
-    }
-  }, [])
 
   const clearRecorderAutoStop = useCallback(() => {
     if (recorderAutoStopRef.current) {
@@ -137,6 +135,7 @@ export const useVoiceCommand = ({ onCommand }) => {
       }
 
       setCommandFeedback('recognized', `Recognized: ${matched}`)
+      console.info('[Voice] Command matched:', matched)
 
       try {
         const handled = await Promise.resolve(onCommand(matched))
@@ -147,33 +146,15 @@ export const useVoiceCommand = ({ onCommand }) => {
         }
 
         setCommandFeedback('executed', `Executed: ${matched}`)
+        console.info('[Voice] Command executed:', matched)
       } catch {
         setVoiceError('There was a problem executing your voice command. Please try again.')
         setCommandFeedback('failed', `Failed: ${matched}`)
+        console.info('[Voice] Command failed:', matched)
       }
     },
     [onCommand, setCommandFeedback, setVoiceError]
   )
-
-  const openDevCommandPrompt = useCallback(async () => {
-    if (!import.meta.env.DEV || typeof window === 'undefined') return
-
-    const typed = window.prompt('Voice debug fallback: type a command (start, stop, walk mode, describe, capture, help).')
-    if (!typed) {
-      setCommandFeedback('unsupported', 'No command entered.')
-      return
-    }
-
-    const normalized = normalizeTranscript(typed)
-    if (!normalized) {
-      setCommandFeedback('unsupported', 'No command entered.')
-      return
-    }
-
-    setLastCommand(normalized)
-    setLiveTranscript(normalized)
-    await processCommand(normalized)
-  }, [processCommand, setCommandFeedback, setLastCommand, setLiveTranscript])
 
   // ── Browser Speech Recognition ──────────────────────────────────
   const startBrowserSTT = useCallback(() => {
@@ -186,77 +167,60 @@ export const useVoiceCommand = ({ onCommand }) => {
 
     recognition.onstart = () => {
       keepListeningRef.current = true
-      commandHandledRef.current = false
-      networkErrorCountRef.current = 0
+      lastHandledCommandRef.current = null
+      lastHandledAtRef.current = 0
       clearFeedback()
       setVoiceError(null)
       setCommandFeedback('listening', 'Listening...')
       setIsListening(true)
-
-      clearListenTimeout()
-      listenTimeoutRef.current = setTimeout(() => {
-        if (commandHandledRef.current || !keepListeningRef.current) return
-
-        keepListeningRef.current = false
-        setCommandFeedback('unsupported', 'Voice timeout. Using command fallback...')
-
-        try {
-          recognition.stop()
-        } catch {
-          // Ignore stop errors and continue to fallback.
-        }
-
-        void openDevCommandPrompt()
-      }, 8000)
+      console.info('[Voice] Browser recognition started')
     }
 
     recognition.onresult = (event) => {
-      const results = Array.from(event.results)
-      const transcript = results.map((r) => r[0].transcript).join(' ').trim().toLowerCase()
+      const latest = event.results?.[event.resultIndex]
+      const transcript = latest?.[0]?.transcript?.trim().toLowerCase() ?? ''
+      if (!transcript) return
+
       setLiveTranscript(transcript)
+      console.info('[Voice] Transcript heard:', transcript)
 
-      if (!commandHandledRef.current) {
-        const matchedFromInterim = findCommandInTranscript(transcript)
-        if (matchedFromInterim) {
-          clearListenTimeout()
-          commandHandledRef.current = true
-          keepListeningRef.current = false
-          setLastCommand(transcript)
-          void processCommand(transcript)
-          recognition.stop()
-          return
-        }
+      if (!latest?.isFinal) {
+        return
       }
 
-      const final = results.find((r) => r.isFinal)
-      if (final && !commandHandledRef.current) {
-        clearListenTimeout()
-        const finalText = final[0].transcript.trim().toLowerCase()
-        commandHandledRef.current = true
-        keepListeningRef.current = false
-        setLastCommand(finalText)
-        void processCommand(finalText)
-        recognition.stop()
+      networkErrorCountRef.current = 0
+
+      const matched = findCommandInTranscript(transcript)
+      if (!matched) return
+
+      const now = Date.now()
+      if (lastHandledCommandRef.current === matched && now - lastHandledAtRef.current < 1200) {
+        return
       }
+
+      lastHandledCommandRef.current = matched
+      lastHandledAtRef.current = now
+      setLastCommand(transcript)
+      console.info('[Voice] Command recognized:', matched)
+      void processCommand(transcript)
     }
 
     recognition.onerror = (event) => {
       const errorCode = event?.error
+      console.info('[Voice] Recognition error:', errorCode)
 
       // These are often transient in browser STT; keep the loop alive.
       if (errorCode === 'no-speech' || errorCode === 'aborted' || errorCode === 'network') {
         if (errorCode === 'network') {
           networkErrorCountRef.current += 1
-          if (networkErrorCountRef.current >= 2) {
-            clearListenTimeout()
-            keepListeningRef.current = false
-            setCommandFeedback('unsupported', 'Voice service unstable. Using command fallback...')
+          if (networkErrorCountRef.current >= 3) {
+            shouldUseFallbackRef.current = true
+            setCommandFeedback('failed', 'Browser voice unstable. Switching to backup speech recognition...')
             try {
               recognition.stop()
             } catch {
-              // Ignore stop errors and continue to fallback.
+              // If stop fails, onend usually follows; fallback will trigger there.
             }
-            void openDevCommandPrompt()
             return
           }
         }
@@ -268,7 +232,6 @@ export const useVoiceCommand = ({ onCommand }) => {
         return
       }
 
-      clearListenTimeout()
       keepListeningRef.current = false
 
       if (errorCode === 'not-allowed' || errorCode === 'service-not-allowed') {
@@ -287,7 +250,15 @@ export const useVoiceCommand = ({ onCommand }) => {
     }
 
     recognition.onend = () => {
-      clearListenTimeout()
+      console.info('[Voice] Browser recognition ended')
+
+      if (shouldUseFallbackRef.current && keepListeningRef.current) {
+        shouldUseFallbackRef.current = false
+        console.info('[Voice] Switching to fallback transcription loop')
+        void startFallbackRef.current()
+        return
+      }
+
       if (keepListeningRef.current) {
         try {
           recognition.start()
@@ -305,7 +276,6 @@ export const useVoiceCommand = ({ onCommand }) => {
     try {
       recognition.start()
     } catch {
-      clearListenTimeout()
       keepListeningRef.current = false
       setVoiceError('Speech recognition could not start. Please try again.')
       setCommandFeedback('failed', 'Speech recognition could not start.')
@@ -321,14 +291,16 @@ export const useVoiceCommand = ({ onCommand }) => {
     setLastCommand,
     setLiveTranscript,
     setVoiceError,
-    clearListenTimeout,
-    openDevCommandPrompt,
   ])
 
   // ── Fallback: MediaRecorder + /transcribe ────────────────────────
   const startFallbackSTT = useCallback(async () => {
+    if (fallbackLoopActiveRef.current || !keepListeningRef.current) return
+
     try {
+      fallbackLoopActiveRef.current = true
       const mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      console.info('[Voice] Fallback transcription capture started')
       clearFeedback()
       setVoiceError(null)
       setCommandFeedback('listening', 'Listening...')
@@ -341,21 +313,57 @@ export const useVoiceCommand = ({ onCommand }) => {
 
       recorder.onstop = async () => {
         clearRecorderAutoStop()
-        setIsListening(false)
+        fallbackLoopActiveRef.current = false
         setIsProcessing(true)
         mediaStream.getTracks().forEach((t) => t.stop())
         const blob = new Blob(chunksRef.current, { type: 'audio/webm' })
         try {
-          const { transcript } = await transcribeAudio(blob)
+          const { transcript, confidence } = await transcribeAudio(blob)
           const lower = transcript.trim().toLowerCase()
+          console.info('[Voice] Transcription received:', lower)
+
+          if (!lower) {
+            setCommandFeedback('listening', 'Listening...')
+            return
+          }
+
+          const matched = findCommandInTranscript(lower)
+          if (!matched) {
+            setCommandFeedback('unsupported', `Unsupported command: "${lower}"`)
+            return
+          }
+
+          const words = lower.split(' ').filter(Boolean)
+          const minConfidence = words.length <= 1 ? 0.9 : 0.75
+          if (Number.isFinite(confidence) && confidence < minConfidence) {
+            setCommandFeedback('unsupported', `Ignored low-confidence transcript: "${lower}" (${confidence.toFixed(2)})`)
+            console.info('[Voice] Ignored low-confidence command transcript', { lower, confidence, minConfidence })
+            return
+          }
+
           setLiveTranscript(lower)
           setLastCommand(lower)
           await processCommand(lower)
-        } catch {
-          setVoiceError('Audio transcription failed. Please try again.')
-          setCommandFeedback('failed', 'Audio transcription failed.')
+        } catch (error) {
+          const message = error?.message ?? 'Audio transcription failed. Please try again.'
+          const isNoSpeech = /no speech detected|stt_empty_transcript/i.test(message)
+          if (isNoSpeech) {
+            setVoiceError(null)
+            setCommandFeedback('listening', 'Listening...')
+            console.info('[Voice] No speech detected in fallback capture')
+          } else {
+            setVoiceError(message)
+            setCommandFeedback('failed', message)
+            console.info('[Voice] Fallback transcription error:', message)
+          }
         } finally {
           setIsProcessing(false)
+
+          if (keepListeningRef.current) {
+            void startFallbackSTT()
+          } else {
+            setIsListening(false)
+          }
         }
       }
 
@@ -366,6 +374,7 @@ export const useVoiceCommand = ({ onCommand }) => {
         }
       }, 3500)
     } catch {
+      fallbackLoopActiveRef.current = false
       setVoiceError('Microphone access failed. Please check browser permissions.')
       setCommandFeedback('failed', 'Microphone access denied.')
       reset()
@@ -383,10 +392,15 @@ export const useVoiceCommand = ({ onCommand }) => {
     setVoiceError,
   ])
 
+  useEffect(() => {
+    startFallbackRef.current = startFallbackSTT
+  }, [startFallbackSTT])
+
   const stopListening = useCallback(() => {
-    clearListenTimeout()
     clearRecorderAutoStop()
     keepListeningRef.current = false
+    shouldUseFallbackRef.current = false
+    fallbackLoopActiveRef.current = false
     if (browserSTTAvailable && recognitionRef.current) {
       recognitionRef.current.stop()
     } else if (mediaRecorderRef.current?.state === 'recording') {
@@ -394,22 +408,34 @@ export const useVoiceCommand = ({ onCommand }) => {
     }
     setIsListening(false)
     setIsProcessing(false)
-  }, [clearListenTimeout, clearRecorderAutoStop, setIsListening, setIsProcessing])
+  }, [clearRecorderAutoStop, setIsListening, setIsProcessing])
+
+  const startListening = useCallback(() => {
+    const hasMediaRecorder = typeof MediaRecorder !== 'undefined' && !!navigator.mediaDevices?.getUserMedia
+
+    if (isListening) return
+
+    keepListeningRef.current = true
+    shouldUseFallbackRef.current = false
+    networkErrorCountRef.current = 0
+
+    if (browserSTTAvailable) {
+      startBrowserSTT()
+      return
+    }
+
+    if (hasMediaRecorder) {
+      void startFallbackSTT()
+    }
+  }, [isListening, startBrowserSTT, startFallbackSTT])
 
   const toggleListening = useCallback(() => {
-    const hasMediaRecorder = typeof MediaRecorder !== 'undefined' && !!navigator.mediaDevices?.getUserMedia
-    const useBrowserFirst = configuredSttMode === 'browser-first'
-
     if (isListening) {
       stopListening()
-    } else if (!useBrowserFirst && hasMediaRecorder) {
-      startFallbackSTT()
-    } else if (browserSTTAvailable) {
-      startBrowserSTT()
-    } else if (hasMediaRecorder) {
-      startFallbackSTT()
+    } else {
+      startListening()
     }
-  }, [isListening, startBrowserSTT, startFallbackSTT, stopListening])
+  }, [isListening, startListening, stopListening])
 
   useEffect(() => {
     return () => stopListening()
@@ -417,6 +443,8 @@ export const useVoiceCommand = ({ onCommand }) => {
 
   return {
     toggleListening,
+    startListening,
+    stopListening,
     isSupported: browserSTTAvailable || (typeof navigator !== 'undefined' && !!navigator.mediaDevices),
   }
 }

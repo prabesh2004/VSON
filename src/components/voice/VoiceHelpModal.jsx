@@ -13,6 +13,7 @@ const COMMAND_HELP = {
   'pause walk mode': 'Pause realtime walkthrough capture.',
   'resume walk mode': 'Resume realtime walkthrough after pause.',
   'stop walk mode': 'Stop realtime walkthrough mode completely.',
+  'stop mic': 'Stop microphone listening until you turn it on again.',
   'go back': 'Go back to the previous screen.',
   stop: 'Stop camera and active speech/walk mode actions.',
   repeat: 'Repeat the latest scene or reading output.',

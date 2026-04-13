@@ -11,6 +11,8 @@ const clamp01 = (value, fallback) => {
  * @returns {Promise<{ transcript: string, confidence: number }>}
  */
 export const transcribeAudio = async ({ audioBuffer, mimeType = 'audio/webm' }) => {
+  console.info('[STT API] Deepgram called')
+
   if (!env.deepgramApiKey) {
     const error = new Error('DEEPGRAM_API_KEY is missing.')
     error.status = 500
@@ -47,10 +49,10 @@ export const transcribeAudio = async ({ audioBuffer, mimeType = 'audio/webm' }) 
   const transcript = String(alternative?.transcript ?? '').trim()
 
   if (!transcript) {
-    const error = new Error('No speech detected in audio.')
-    error.status = 422
-    error.code = 'STT_EMPTY_TRANSCRIPT'
-    throw error
+    return {
+      transcript: '',
+      confidence: 0,
+    }
   }
 
   return {

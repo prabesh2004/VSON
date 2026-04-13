@@ -8,6 +8,7 @@ export const VOICE_COMMANDS = /** @type {const} */ ([
   'pause walk mode',
   'resume walk mode',
   'stop walk mode',
+  'stop mic',
   'go back',
   'stop',
   'repeat',

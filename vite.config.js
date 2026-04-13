@@ -15,7 +15,11 @@ export default defineConfig(({ mode }) => {
       react(),
       VitePWA({
         registerType: 'autoUpdate',
+        includeAssets: ['favicon.svg', 'icons.svg', 'pwa-192.png', 'pwa-512.png'],
         manifest: {
+          id: '/',
+          start_url: '/',
+          scope: '/',
           name: 'Vision — AI Accessibility App',
           short_name: 'Vision',
           description: 'AI-powered accessibility application for visually impaired users',
@@ -23,6 +27,22 @@ export default defineConfig(({ mode }) => {
           background_color: '#0B121B',
           display: 'standalone',
           icons: [
+            {
+              src: '/pwa-192.png',
+              sizes: '192x192',
+              type: 'image/png',
+            },
+            {
+              src: '/pwa-512.png',
+              sizes: '512x512',
+              type: 'image/png',
+            },
+            {
+              src: '/pwa-512.png',
+              sizes: '512x512',
+              type: 'image/png',
+              purpose: 'maskable',
+            },
             { src: '/favicon.svg', sizes: 'any', type: 'image/svg+xml' },
           ],
         },

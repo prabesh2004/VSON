@@ -27,6 +27,27 @@ export const AppRuntime = ({ router }) => {
     }
   }, [setIsConnected])
 
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (event) => {
+      event.preventDefault()
+      window.__visionDeferredPrompt = event
+      window.dispatchEvent(new Event('vision:pwa-installability-changed'))
+    }
+
+    const handleAppInstalled = () => {
+      window.__visionDeferredPrompt = null
+      window.dispatchEvent(new Event('vision:pwa-installability-changed'))
+    }
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+    window.addEventListener('appinstalled', handleAppInstalled)
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+      window.removeEventListener('appinstalled', handleAppInstalled)
+    }
+  }, [])
+
   return (
     <>
       <ConnectivityBanner />

@@ -95,6 +95,8 @@ const extractOpenRouterText = (content) => {
 }
 
 const callGroqFallback = async ({ imageBase64, prompt }) => {
+  console.info('[Vision API] Groq fallback called')
+
   if (!env.groqApiKey) {
     const error = new Error('Groq fallback is not configured. Set GROQ_API_KEY (or GORQ_API_KEY) in backend/.env.')
     error.status = 500
@@ -164,6 +166,8 @@ const callGroqFallback = async ({ imageBase64, prompt }) => {
 }
 
 const callOpenRouterFallback = async ({ imageBase64, prompt }) => {
+  console.info('[Vision API] OpenRouter fallback called')
+
   if (!env.openRouterApiKey) {
     const error = new Error(
       'OpenRouter fallback is not configured. Set OPENROUTER_API_KEY (or GEMA_API_KEY) in backend/.env.'
@@ -282,6 +286,8 @@ const parseStructuredDescribe = (rawText) => {
 
 const callGemini = async ({ imageBase64, prompt, model }) => {
   try {
+    console.info('[Vision API] Gemini API called', { model: normalizeModelName(model) })
+
     const client = genAI.getGenerativeModel({
       model: normalizeModelName(model),
       systemInstruction: VISION_SYSTEM_INSTRUCTION,
@@ -303,6 +309,7 @@ const callGemini = async ({ imageBase64, prompt, model }) => {
     return result?.response?.text()?.trim() ?? ''
   } catch (error) {
     if (isGeminiRateLimited(error)) {
+      console.info('[Vision API] Gemini rate limited, attempting fallbacks')
       let groqError = null
 
       if (env.groqApiKey) {

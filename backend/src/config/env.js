@@ -71,7 +71,7 @@ export const env = {
     .replace(/^['"]|['"]$/g, ''),
   openRouterModel: (process.env.OPENROUTER_MODEL ?? 'google/gemma-4-26b-a4b-it:free').trim(),
   sttProvider: resolveSttProvider(),
-  sttFallbackProviders: toProviderList(process.env.STT_FALLBACKS, 'mock'),
+  sttFallbackProviders: toProviderList(process.env.STT_FALLBACKS, ''),
   deepgramApiKey: (process.env.DEEPGRAM_API_KEY ?? '').trim().replace(/^['"]|['"]$/g, ''),
   deepgramModel: (process.env.DEEPGRAM_MODEL ?? 'nova-2').trim(),
   ttsProvider: resolveTtsProvider(),
@@ -79,5 +79,5 @@ export const env = {
   elevenLabsApiKey: (process.env.ELEVENLABS_API_KEY ?? '').trim().replace(/^['"]|['"]$/g, ''),
   elevenLabsVoiceId: (process.env.ELEVENLABS_VOICE_ID ?? 'EXAVITQu4vr4xnSDxMaL').trim(),
   elevenLabsModelId: (process.env.ELEVENLABS_MODEL_ID ?? 'eleven_multilingual_v2').trim(),
-  sttMockTranscript: process.env.STT_MOCK_TRANSCRIPT ?? 'describe',
+  sttMockTranscript: process.env.STT_MOCK_TRANSCRIPT ?? '',
 }

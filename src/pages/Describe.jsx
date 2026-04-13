@@ -49,7 +49,8 @@ export const Describe = () => {
     addSceneHistory,
   } = useAppStore()
   const { sceneHistory } = useAppStore()
-  const { isSpeaking } = useVoiceStore()
+  const isSpeaking = useVoiceStore((state) => state.isSpeaking)
+  const isListening = useVoiceStore((state) => state.isListening)
   const fontSizeClass = FONT_SIZE_CLASSES[fontSize] ?? 'text-base'
   const baseWalkIntervalMs = Math.round(1000 / Math.max(0.1, walkTargetFps))
   const tutorialStorageKey = `vision-tutorial-seen:${user?.id ?? 'guest'}`
@@ -64,6 +65,11 @@ export const Describe = () => {
   const lastRequestedDetailLevel = useRef(detailLevel)
   const pendingWalkStartRef = useRef(false)
   const pendingCaptureDetailRef = useRef(null)
+  const autoMicStartedRef = useRef(false)
+  const manualMicDisabledRef = useRef(false)
+  const micPausedForTtsRef = useRef(false)
+  const micPausedForHelpRef = useRef(false)
+  const stopListeningRef = useRef(() => {})
   const isCameraLoadingRef = useRef(isLoading)
   const cameraErrorRef = useRef(error)
   const accountMenuRef = useRef(null)
@@ -353,6 +359,9 @@ export const Describe = () => {
         }
         stopSpeaking()
         return true
+      } else if (command === 'stop mic') {
+        stopListeningRef.current()
+        return true
       } else if (command === 'repeat' && data?.description) {
         speak(data.description)
         return true
@@ -394,7 +403,65 @@ export const Describe = () => {
     ]
   )
 
-  const { toggleListening } = useVoiceCommand({ onCommand: handleCommand })
+  const { startListening, stopListening, isSupported: isVoiceSupported } = useVoiceCommand({ onCommand: handleCommand })
+
+  useEffect(() => {
+    stopListeningRef.current = stopListening
+  }, [stopListening])
+
+  const handleMicToggle = useCallback(() => {
+    if (isListening) {
+      manualMicDisabledRef.current = true
+      micPausedForTtsRef.current = false
+      stopListening()
+      return
+    }
+
+    manualMicDisabledRef.current = false
+    startListening()
+  }, [isListening, startListening, stopListening])
+
+  useEffect(() => {
+    if (autoMicStartedRef.current || !isVoiceSupported) return
+
+    autoMicStartedRef.current = true
+    manualMicDisabledRef.current = false
+    startListening()
+  }, [isVoiceSupported, startListening])
+
+  useEffect(() => {
+    if (isSpeaking) {
+      if (isListening) {
+        micPausedForTtsRef.current = true
+        stopListening()
+      }
+      return
+    }
+
+    if (micPausedForTtsRef.current) {
+      micPausedForTtsRef.current = false
+      if (!manualMicDisabledRef.current && isVoiceSupported) {
+        startListening()
+      }
+    }
+  }, [isListening, isSpeaking, isVoiceSupported, startListening, stopListening])
+
+  useEffect(() => {
+    if (isHelpOpen) {
+      if (isListening) {
+        micPausedForHelpRef.current = true
+        stopListening()
+      }
+      return
+    }
+
+    if (micPausedForHelpRef.current) {
+      micPausedForHelpRef.current = false
+      if (!manualMicDisabledRef.current && !isSpeaking && isVoiceSupported) {
+        startListening()
+      }
+    }
+  }, [isHelpOpen, isListening, isSpeaking, isVoiceSupported, startListening, stopListening])
 
   const handleRestartCamera = useCallback(() => {
     stopCamera()
@@ -577,7 +644,7 @@ export const Describe = () => {
                       </Button>
                     )}
 
-                    <VoiceButton onToggle={toggleListening} compact hideStatus className="shrink-0" />
+                    <VoiceButton onToggle={handleMicToggle} compact hideStatus className="shrink-0" />
 
                     <Button
                       variant={isSpeaking ? 'primary' : 'secondary'}

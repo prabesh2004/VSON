@@ -7,6 +7,8 @@ const clamp = (value, min, max) => Math.min(Math.max(value, min), max)
  * @returns {Promise<{ audio_base64: string, duration_seconds: number }>}
  */
 export const synthesizeSpeech = async ({ text, speed = 1, voice }) => {
+  console.info('[TTS API] ElevenLabs called')
+
   if (!env.elevenLabsApiKey) {
     const error = new Error('ELEVENLABS_API_KEY is missing.')
     error.status = 500
