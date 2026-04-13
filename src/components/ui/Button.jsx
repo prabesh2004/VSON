@@ -1,5 +1,7 @@
 import { memo } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
+import { cva } from 'class-variance-authority'
+import { cn } from '@/lib/utils'
 
 const _MOTION = motion
 
@@ -21,22 +23,33 @@ const _MOTION = motion
  * @property {'button'|'submit'|'reset'} [type='button']
  */
 
-const variantClasses = {
-  primary:
-    'bg-[#A9D1F5] text-[#0B121B] hover:bg-[#93c4ef] active:bg-[#7eb8e8]',
-  secondary:
-    'bg-[#161F2C] text-[#E9EEF4] border border-[#2F3C4C] hover:bg-[#1c2838] active:bg-[#243044]',
-  ghost:
-    'bg-transparent text-[#7A8B9B] hover:text-[#E9EEF4] hover:bg-[#161F2C] active:bg-[#161F2C]/80',
-  danger:
-    'bg-[#FF6B6B] text-[#E9EEF4] hover:bg-[#e55a5a] active:bg-[#cc4a4a]',
-}
-
-const sizeClasses = {
-  sm: 'px-3 py-1.5 text-sm min-h-[48px] min-w-[48px]',
-  md: 'px-5 py-2.5 text-base min-h-[48px] min-w-[48px]',
-  lg: 'px-7 py-3.5 text-lg min-h-[56px] min-w-[56px]',
-}
+const buttonVariants = cva(
+  [
+    'inline-flex items-center justify-center gap-2 rounded-md font-body font-medium whitespace-nowrap select-none',
+    'transition-colors',
+    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+    'disabled:pointer-events-none disabled:opacity-50',
+  ].join(' '),
+  {
+    variants: {
+      variant: {
+        primary: 'bg-primary text-primary-foreground hover:bg-primary/90',
+        secondary: 'border border-border bg-secondary text-secondary-foreground hover:bg-secondary/80',
+        ghost: 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
+        danger: 'bg-destructive text-destructive-foreground hover:bg-destructive/90',
+      },
+      size: {
+        sm: 'h-10 min-w-10 px-3 text-sm',
+        md: 'h-11 min-w-11 px-4 text-sm',
+        lg: 'h-12 min-w-12 px-6 text-base',
+      },
+    },
+    defaultVariants: {
+      variant: 'primary',
+      size: 'md',
+    },
+  }
+)
 
 export const Button = memo(
   /**
@@ -68,22 +81,16 @@ export const Button = memo(
         aria-busy={isLoading}
         whileTap={prefersReduced ? {} : { scale: 0.97 }}
         transition={{ duration: 0.1 }}
-        className={[
-          'inline-flex items-center justify-center gap-2 rounded-xl font-body font-medium',
-          'transition-colors duration-150',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#A9D1F5] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0B121B]',
-          'disabled:opacity-50 disabled:cursor-not-allowed',
-          variantClasses[variant],
-          sizeClasses[size],
-          className,
-        ].join(' ')}
+        className={cn(buttonVariants({ variant, size }), className)}
         {...rest}
       >
         {isLoading ? (
           <span className="inline-block w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" aria-hidden="true" />
-        ) : leftIcon}
+        ) : leftIcon ? (
+          <span data-icon="inline-start" aria-hidden="true">{leftIcon}</span>
+        ) : null}
         {children}
-        {!isLoading && rightIcon}
+        {!isLoading && rightIcon ? <span data-icon="inline-end" aria-hidden="true">{rightIcon}</span> : null}
       </motion.button>
     )
   }

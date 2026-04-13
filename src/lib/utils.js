@@ -1,3 +1,6 @@
+import { clsx } from 'clsx'
+import { twMerge } from 'tailwind-merge'
+
 /**
  * Convert a canvas or video frame to a base64-encoded JPEG string.
  * @param {HTMLCanvasElement} canvas
@@ -68,3 +71,10 @@ export const hashBase64 = (base64) => {
   }
   return hash.toString(36)
 }
+
+/**
+ * Merge conditional class names using clsx + tailwind-merge.
+ * @param {...any} inputs
+ * @returns {string}
+ */
+export const cn = (...inputs) => twMerge(clsx(inputs))

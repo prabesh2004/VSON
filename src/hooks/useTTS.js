@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react'
 import { useVoiceStore } from '@/store/useVoiceStore'
 import { synthesizeSpeech } from '@/api/tts'
-import { playBase64Audio } from '@/lib/utils'
 import { useAppStore } from '@/store/useAppStore'
 
 /**
@@ -14,19 +13,28 @@ import { useAppStore } from '@/store/useAppStore'
 export const useTTS = () => {
   const { setIsSpeaking, setVoiceError, setCommandFeedback } = useVoiceStore()
   const { fontSize, voiceSpeed } = useAppStore()
-  const utteranceRef = useRef(null)
-  const browserTTSAvailable = typeof window !== 'undefined' && 'speechSynthesis' in window
+  const currentAudioRef = useRef(null)
+  const speakRequestIdRef = useRef(0)
 
   useEffect(() => {
     return () => {
-      if (browserTTSAvailable) window.speechSynthesis.cancel()
+      if (currentAudioRef.current) {
+        currentAudioRef.current.pause()
+        currentAudioRef.current.src = ''
+        currentAudioRef.current = null
+      }
     }
-  }, [browserTTSAvailable])
+  }, [])
 
   const stop = useCallback(() => {
-    if (browserTTSAvailable) window.speechSynthesis.cancel()
+    speakRequestIdRef.current += 1
+    if (currentAudioRef.current) {
+      currentAudioRef.current.pause()
+      currentAudioRef.current.src = ''
+      currentAudioRef.current = null
+    }
     setIsSpeaking(false)
-  }, [browserTTSAvailable, setIsSpeaking])
+  }, [setIsSpeaking])
 
   const speak = useCallback(
     async (text) => {
@@ -38,39 +46,53 @@ export const useTTS = () => {
       const resolvedSpeed = Number.isFinite(voiceSpeed) ? voiceSpeed : fallbackSpeed
       const clampedSpeed = Math.min(2, Math.max(0.5, resolvedSpeed))
 
-      if (browserTTSAvailable) {
-        return new Promise((resolve) => {
-          window.speechSynthesis.cancel()
-          const utterance = new SpeechSynthesisUtterance(text)
-          utterance.rate = clampedSpeed
-          utterance.onstart = () => setIsSpeaking(true)
-          utterance.onend = () => {
-            setIsSpeaking(false)
-            resolve()
-          }
-          utterance.onerror = () => {
-            setVoiceError('Speech playback failed. Please try again.')
-            setCommandFeedback('failed', 'Speech playback failed.')
-            setIsSpeaking(false)
-            resolve()
-          }
-          utteranceRef.current = utterance
-          window.speechSynthesis.speak(utterance)
-        })
+      const requestId = speakRequestIdRef.current + 1
+      speakRequestIdRef.current = requestId
+
+      if (currentAudioRef.current) {
+        currentAudioRef.current.pause()
+        currentAudioRef.current.src = ''
+        currentAudioRef.current = null
       }
 
       try {
         setIsSpeaking(true)
         const { audio_base64 } = await synthesizeSpeech({ text, speed: clampedSpeed })
-        await playBase64Audio(audio_base64)
-      } catch {
-        setVoiceError('Text-to-speech service is unavailable right now.')
-        setCommandFeedback('failed', 'TTS fallback failed.')
+
+        if (requestId !== speakRequestIdRef.current) {
+          return
+        }
+
+        if (!audio_base64) {
+          setVoiceError('TTS service returned empty audio.')
+          setCommandFeedback('failed', 'TTS returned empty audio.')
+          return
+        }
+
+        await new Promise((resolve, reject) => {
+          const audio = new Audio(`data:audio/mpeg;base64,${audio_base64}`)
+          currentAudioRef.current = audio
+
+          audio.onended = () => resolve()
+          audio.onerror = reject
+
+          audio.play().catch(reject)
+        })
+      } catch (error) {
+        const blocked = error?.name === 'NotAllowedError'
+        if (blocked) {
+          setCommandFeedback('unsupported', 'Audio is blocked until you tap the page once.')
+        } else {
+          setVoiceError('Speech playback failed. Please try again.')
+          setCommandFeedback('failed', 'Speech playback failed.')
+        }
       } finally {
-        setIsSpeaking(false)
+        if (requestId === speakRequestIdRef.current) {
+          setIsSpeaking(false)
+        }
       }
     },
-    [browserTTSAvailable, fontSize, voiceSpeed, setCommandFeedback, setIsSpeaking, setVoiceError]
+    [fontSize, voiceSpeed, setCommandFeedback, setIsSpeaking, setVoiceError]
   )
 
   return { speak, stop }

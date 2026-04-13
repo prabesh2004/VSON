@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { getPreferences, updatePreferences } from '@/api/preferences'
 import { useAppStore } from '@/store/useAppStore'
+import { useAuthStore } from '@/store/useAuthStore'
 import {
   FONT_SIZES,
   DETAIL_LEVELS,
@@ -46,6 +47,8 @@ export const Settings = () => {
     setWalkTargetFps,
     setWalkAdaptiveScheduling,
   } = useAppStore()
+  const authUser = useAuthStore((state) => state.user)
+  const preferencesUserId = authUser?.id ?? PREFERENCES_USER_ID
   const [saveMessage, setSaveMessage] = useState('')
   const [saveType, setSaveType] = useState('success')
 
@@ -81,7 +84,7 @@ export const Settings = () => {
       if (!isConnected) return
 
       try {
-        const prefs = await getPreferences(PREFERENCES_USER_ID)
+        const prefs = await getPreferences(preferencesUserId)
         if (!mounted) return
 
         const nextFont = FONT_SIZES.includes(prefs.font_size) ? prefs.font_size : fontSize
@@ -112,6 +115,7 @@ export const Settings = () => {
     detailLevel,
     fontSize,
     isConnected,
+    preferencesUserId,
     setDetailLevel,
     setFontSize,
     setValue,
@@ -133,7 +137,7 @@ export const Settings = () => {
     }
 
     try {
-      await updatePreferences(PREFERENCES_USER_ID, {
+      await updatePreferences(preferencesUserId, {
         font_size: values.fontSize,
         detail_level: values.detailLevel,
         voice_speed: values.voiceSpeed,

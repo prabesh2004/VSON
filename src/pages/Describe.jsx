@@ -1,52 +1,78 @@
 import { useEffect, useRef, useCallback, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Activity, ArrowLeft, BrainCircuit, CircleHelp, Pause, Play, RefreshCw, Square, Wifi, WifiOff } from 'lucide-react'
+import { Activity, ArrowLeft, BrainCircuit, Camera, CircleHelp, LogOut, Pause, Play, RefreshCw, Square, Volume2, VolumeX, Wifi, WifiOff } from 'lucide-react'
 import { motion, useReducedMotion } from 'framer-motion'
-import { CaptureButton } from '@/components/camera/CaptureButton'
 import { FramePreview } from '@/components/camera/FramePreview'
 import { VoiceButton } from '@/components/voice/VoiceButton'
 import { CommandHUD } from '@/components/voice/CommandHUD'
 import { VoiceHelpModal } from '@/components/voice/VoiceHelpModal'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
+import { Badge } from '@/components/ui/badge'
+import { Separator } from '@/components/ui/separator'
 import { useCamera } from '@/hooks/useCamera'
 import { useDescribe } from '@/hooks/useDescribe'
-import { useRealtimeDescribe } from '@/hooks/useRealtimeDescribe'
+import { useGeminiLive } from '@/hooks/useGeminiLive'
 import { useTTS } from '@/hooks/useTTS'
 import { useVoiceCommand } from '@/hooks/useVoiceCommand'
 import { useAppStore } from '@/store/useAppStore'
+import { useAuthStore } from '@/store/useAuthStore'
+import { useVoiceStore } from '@/store/useVoiceStore'
 import { FONT_SIZE_CLASSES, ROUTES } from '@/lib/constants'
 
 const _MOTION = motion
+const DEV_MOCK_FRAME_BASE64 = 'ZGV2LW1vY2stZnJhbWU='
+const TUTORIAL_VOICE_TEXT =
+  'Say start to start camera. Say capture to capture an image and describe it. Say walk mode for realtime guidance. Say help to open voice command help. Say tutorial to hear this again.'
+
+const initialsFromName = (name = '') => {
+  const parts = name
+    .split(' ')
+    .map((part) => part.trim())
+    .filter(Boolean)
+
+  if (parts.length === 0) return 'U'
+  if (parts.length === 1) return parts[0].slice(0, 1).toUpperCase()
+  return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase()
+}
 
 export const Describe = () => {
   const navigate = useNavigate()
   const prefersReduced = useReducedMotion()
+  const user = useAuthStore((state) => state.user)
+  const logout = useAuthStore((state) => state.logout)
   const {
     isConnected,
     fontSize,
     detailLevel,
     walkTargetFps,
-    walkAdaptiveScheduling,
     addSceneHistory,
   } = useAppStore()
   const { sceneHistory } = useAppStore()
+  const { isSpeaking } = useVoiceStore()
   const fontSizeClass = FONT_SIZE_CLASSES[fontSize] ?? 'text-base'
   const baseWalkIntervalMs = Math.round(1000 / Math.max(0.1, walkTargetFps))
+  const tutorialStorageKey = `vision-tutorial-seen:${user?.id ?? 'guest'}`
 
-  const { stream, isLoading, error, capturedDataUrl, videoRef, startCamera, stopCamera, captureFrame } =
+  const { stream, isVideoReady, isLoading, error, capturedDataUrl, setVideoElement, startCamera, stopCamera, captureFrame } =
     useCamera()
-  const { describe, describeAsync, data, isPending, error: describeError, reset } = useDescribe()
+  const { describe, data, isPending, error: describeError, reset } = useDescribe()
   const { speak, stop: stopSpeaking } = useTTS()
   const hasAutoSpoken = useRef(false)
   const lastSavedResultKey = useRef('')
+  const lastLiveDescriptionRef = useRef('')
   const lastRequestedDetailLevel = useRef(detailLevel)
+  const pendingWalkStartRef = useRef(false)
+  const pendingCaptureDetailRef = useRef(null)
+  const isCameraLoadingRef = useRef(isLoading)
+  const cameraErrorRef = useRef(error)
+  const accountMenuRef = useRef(null)
   const [isHelpOpen, setIsHelpOpen] = useState(false)
+  const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false)
 
   useEffect(() => {
-    startCamera()
     return () => stopCamera()
-  }, [startCamera, stopCamera])
+  }, [stopCamera])
 
   useEffect(() => {
     if (data?.description && !hasAutoSpoken.current) {
@@ -54,6 +80,42 @@ export const Describe = () => {
       speak(data.description)
     }
   }, [data, speak])
+
+  useEffect(() => {
+    isCameraLoadingRef.current = isLoading
+    cameraErrorRef.current = error
+  }, [error, isLoading])
+
+  const playTutorial = useCallback(() => {
+    speak(TUTORIAL_VOICE_TEXT)
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(tutorialStorageKey, '1')
+    }
+  }, [speak, tutorialStorageKey])
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !user?.id) return
+
+    const hasSeenTutorial = window.localStorage.getItem(tutorialStorageKey) === '1'
+    if (hasSeenTutorial) return
+
+    playTutorial()
+  }, [playTutorial, tutorialStorageKey, user?.id])
+
+  useEffect(() => {
+    if (!isAccountMenuOpen) return
+
+    const handleClickOutside = (event) => {
+      if (accountMenuRef.current && !accountMenuRef.current.contains(event.target)) {
+        setIsAccountMenuOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [isAccountMenuOpen])
 
   useEffect(() => {
     if (!data?.description) return
@@ -76,7 +138,13 @@ export const Describe = () => {
       const requestedDetail = overrideDetailLevel ?? detailLevel
       lastRequestedDetailLevel.current = requestedDetail
 
-      const base64 = captureFrame()
+      let base64 = captureFrame()
+
+      // In development, allow voice-command testing without camera hardware.
+      if (!base64 && import.meta.env.DEV) {
+        base64 = DEV_MOCK_FRAME_BASE64
+      }
+
       if (!base64) return null
 
       return {
@@ -96,15 +164,56 @@ export const Describe = () => {
     return true
   }, [describe, prepareCapturePayload, reset])
 
-  const handleCaptureAsync = useCallback(async (overrideDetailLevel) => {
-    const payload = prepareCapturePayload(overrideDetailLevel)
-    if (!payload) return false
+  const canRunWalkMode = Boolean(stream && isVideoReady && isConnected && !isLoading)
 
-    await describeAsync({ image: payload.image, detail_level: payload.detailLevel })
-    return true
-  }, [describeAsync, prepareCapturePayload])
+  const requestCameraStart = useCallback(async () => {
+    if (isCameraLoadingRef.current) return false
 
-  const canRunWalkMode = Boolean(stream && isConnected && !isLoading)
+    const started = await startCamera()
+    if (started) return true
+
+    if (!cameraErrorRef.current && !isCameraLoadingRef.current) {
+      return startCamera()
+    }
+
+    return false
+  }, [startCamera])
+
+  const requestCapture = useCallback(
+    (overrideDetailLevel) => {
+      if (!isConnected) return false
+
+      if (!stream || !isVideoReady) {
+        pendingCaptureDetailRef.current = overrideDetailLevel ?? '__default__'
+        if (!isLoading) {
+          void requestCameraStart()
+        }
+        return true
+      }
+
+      return handleCapture(overrideDetailLevel)
+    },
+    [handleCapture, isConnected, isLoading, isVideoReady, requestCameraStart, stream]
+  )
+
+  const handleLiveDescription = useCallback(
+    (description, confidence) => {
+      if (!description) return
+
+      if (lastLiveDescriptionRef.current === description) {
+        return
+      }
+
+      lastLiveDescriptionRef.current = description
+      speak(description)
+      addSceneHistory({
+        description,
+        detailLevel: 'brief',
+        confidence,
+      })
+    },
+    [addSceneHistory, speak]
+  )
 
   const {
     mode: walkMode,
@@ -113,36 +222,138 @@ export const Describe = () => {
     pause: pauseWalkMode,
     resume: resumeWalkMode,
     stop: stopWalkMode,
-  } = useRealtimeDescribe({
-    runFrame: () => handleCaptureAsync(),
+    latestDescription: walkLatestDescription,
+    triggerDescribe: triggerLiveDescribe,
+  } = useGeminiLive({
+    captureFrame,
     intervalMs: baseWalkIntervalMs,
-    adaptiveScheduling: walkAdaptiveScheduling,
     canRun: canRunWalkMode,
+    onDescription: handleLiveDescription,
   })
+
+  const handleStartWalkMode = useCallback(() => {
+    if (!isConnected) return false
+
+    if (!stream || !isVideoReady) {
+      pendingWalkStartRef.current = true
+      void requestCameraStart()
+      return true
+    }
+
+    pendingWalkStartRef.current = false
+    return startWalkMode()
+  }, [isConnected, isVideoReady, requestCameraStart, startWalkMode, stream])
+
+  const handleStopWalkMode = useCallback(() => {
+    pendingWalkStartRef.current = false
+    return stopWalkMode()
+  }, [stopWalkMode])
+
+  const handleToggleWalkPause = useCallback(() => {
+    if (walkMode === 'running') {
+      return pauseWalkMode()
+    }
+
+    if (walkMode === 'paused') {
+      return resumeWalkMode()
+    }
+
+    return false
+  }, [pauseWalkMode, resumeWalkMode, walkMode])
+
+  const handleLogout = useCallback(() => {
+    setIsAccountMenuOpen(false)
+    logout()
+    navigate(ROUTES.LOGIN)
+  }, [logout, navigate])
+
+  const handleToggleCamera = useCallback(() => {
+    if (!stream && !isLoading) {
+      void requestCameraStart()
+      return
+    }
+
+    pendingWalkStartRef.current = false
+    pendingCaptureDetailRef.current = null
+    if (walkMode !== 'idle') {
+      stopWalkMode()
+    }
+    stopCamera()
+  }, [isLoading, requestCameraStart, stopCamera, stopWalkMode, stream, walkMode])
+
+  const handleCaptureButtonPress = useCallback(() => {
+    requestCapture()
+  }, [requestCapture])
+
+  useEffect(() => {
+    if (!pendingWalkStartRef.current) return
+    if (!stream || !isVideoReady || isLoading || !isConnected) return
+
+    const started = startWalkMode()
+    if (started) {
+      pendingWalkStartRef.current = false
+    }
+  }, [isConnected, isLoading, isVideoReady, startWalkMode, stream])
+
+  useEffect(() => {
+    if (!pendingCaptureDetailRef.current) return
+    if (!stream || !isVideoReady || isLoading || !isConnected) return
+
+    const pendingDetail = pendingCaptureDetailRef.current
+    pendingCaptureDetailRef.current = null
+
+    if (pendingDetail === '__default__') {
+      handleCapture()
+      return
+    }
+
+    handleCapture(pendingDetail)
+  }, [handleCapture, isConnected, isLoading, isVideoReady, stream])
+
+  useEffect(() => {
+    if (!error) return
+    pendingWalkStartRef.current = false
+    pendingCaptureDetailRef.current = null
+  }, [error])
 
   const handleCommand = useCallback(
     (command) => {
-      if (command === 'describe') {
-        if (!isConnected) return false
-        return handleCapture()
+      if (command === 'describe' || command === 'capture') {
+        if (walkMode === 'running') {
+          if (!isConnected) return false
+          return triggerLiveDescribe(false)
+        }
+        return requestCapture()
       } else if (command === 'describe in detail') {
-        if (!isConnected) return false
-        return handleCapture('detailed')
-      } else if (command === 'start walk mode') {
-        return startWalkMode()
+        if (walkMode === 'running') {
+          if (!isConnected) return false
+          return triggerLiveDescribe(true)
+        }
+        return requestCapture('detailed')
+      } else if (command === 'start') {
+        if (!stream && !isLoading) {
+          void requestCameraStart()
+        }
+        return true
+      } else if (command === 'walk mode' || command === 'start walk mode') {
+        return handleStartWalkMode()
       } else if (command === 'pause walk mode') {
         return pauseWalkMode()
       } else if (command === 'resume walk mode') {
         return resumeWalkMode()
       } else if (command === 'stop walk mode') {
-        return stopWalkMode()
+        return handleStopWalkMode()
       } else if (command === 'stop') {
         if (walkMode !== 'idle') {
-          stopWalkMode()
+          handleStopWalkMode()
+        }
+        pendingCaptureDetailRef.current = null
+        if (stream || isLoading) {
+          stopCamera()
         }
         stopSpeaking()
         return true
-      } else if ((command === 'repeat' || command === 'read this page') && data?.description) {
+      } else if (command === 'repeat' && data?.description) {
         speak(data.description)
         return true
       } else if (command === 'go back') {
@@ -151,11 +362,12 @@ export const Describe = () => {
       } else if (command === 'settings') {
         navigate(ROUTES.SETTINGS)
         return true
-      } else if (command === 'open book') {
-        navigate(ROUTES.READ_DOC)
-        return true
       } else if (command === 'help') {
         setIsHelpOpen(true)
+        return true
+      } else if (command === 'tutorial') {
+        setIsHelpOpen(true)
+        playTutorial()
         return true
       }
 
@@ -163,16 +375,22 @@ export const Describe = () => {
     },
     [
       data,
-      handleCapture,
+      triggerLiveDescribe,
       isConnected,
+      isLoading,
       navigate,
       pauseWalkMode,
       resumeWalkMode,
       speak,
-      startWalkMode,
+      requestCameraStart,
+      handleStartWalkMode,
+      handleStopWalkMode,
+      requestCapture,
+      stopCamera,
       stopSpeaking,
-      stopWalkMode,
+      stream,
       walkMode,
+      playTutorial,
     ]
   )
 
@@ -183,18 +401,14 @@ export const Describe = () => {
     setTimeout(() => startCamera(), 300)
   }, [startCamera, stopCamera])
 
-  const cameraStatus = error ? 'Error' : isLoading ? 'Starting' : stream ? 'Live' : 'Inactive'
+  const cameraStatus = error ? 'Error' : isLoading ? 'Starting' : stream ? (isVideoReady ? 'Live' : 'Warming Up') : 'Inactive'
+  const shouldShowCaptureButton = Boolean(stream)
+  const canCaptureSingleImage = Boolean(stream && isVideoReady && isConnected && !isLoading && walkMode !== 'running')
+  const canToggleWalkPause =
+    walkMode === 'running' || (walkMode === 'paused' && canRunWalkMode)
   const walkModeLabel =
     walkMode === 'running' ? 'Running' : walkMode === 'paused' ? 'Paused' : 'Idle'
-
-  // Expose videoRef to CameraView via a callback ref pattern
-  const setVideoRef = useCallback(
-    (node) => {
-      videoRef.current = node
-      if (node && stream) node.srcObject = stream
-    },
-    [stream, videoRef]
-  )
+  const activeDescription = walkLatestDescription || data?.description
 
   return (
     <main id="main-content" className="relative min-h-dvh bg-[#0B121B] px-3 py-5 sm:px-6 sm:py-6 lg:px-8">
@@ -224,18 +438,18 @@ export const Describe = () => {
           </div>
 
           <div className="w-full sm:w-auto flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1 rounded-full border border-[#2F3C4C] bg-[#161F2C]/90 px-3 py-1 text-xs font-body text-[#E9EEF4]">
+            <Badge variant={isConnected ? 'secondary' : 'destructive'} className="h-7 gap-1 px-2.5">
               {isConnected ? <Wifi size={12} aria-hidden="true" /> : <WifiOff size={12} aria-hidden="true" />}
               {isConnected ? 'Online' : 'Offline'}
-            </span>
-            <span className="inline-flex items-center gap-1 rounded-full border border-[#2F3C4C] bg-[#161F2C]/90 px-3 py-1 text-xs font-body text-[#E9EEF4]">
+            </Badge>
+            <Badge variant="outline" className="h-7 gap-1 px-2.5">
               <BrainCircuit size={12} aria-hidden="true" />
               {detailLevel}
-            </span>
-            <span className="inline-flex items-center gap-1 rounded-full border border-[#2F3C4C] bg-[#161F2C]/90 px-3 py-1 text-xs font-body text-[#E9EEF4]">
+            </Badge>
+            <Badge variant="outline" className="h-7 gap-1 px-2.5">
               <Activity size={12} aria-hidden="true" />
               Walk: {walkModeLabel}
-            </span>
+            </Badge>
             <Button
               variant="secondary"
               size="sm"
@@ -245,6 +459,44 @@ export const Describe = () => {
             >
               Session Memory ({sceneHistory.length})
             </Button>
+
+            <div ref={accountMenuRef} className="relative ml-auto sm:ml-0 flex items-center justify-center">
+              <button
+                type="button"
+                onClick={() => setIsAccountMenuOpen((open) => !open)}
+                aria-label="Open account menu"
+                aria-haspopup="menu"
+                aria-expanded={isAccountMenuOpen}
+                className="flex size-10 items-center justify-center rounded-full border-2 border-[#2F3C4C] bg-[#0B121B] overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#A9D1F5]"
+              >
+                {user?.picture ? (
+                  <img
+                    src={user.picture}
+                    alt={user?.name ? `${user.name} profile` : 'User profile'}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <span className="text-xs font-display font-semibold text-[#A9D1F5]" aria-hidden="true">
+                    {initialsFromName(user?.name)}
+                  </span>
+                )}
+              </button>
+
+              {isAccountMenuOpen && (
+                <div className="absolute right-0 mt-2 min-w-[130px] rounded-lg border border-[#2F3C4C] bg-[#161F2C] p-2 shadow-xl z-20">
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    className="w-full justify-center"
+                    leftIcon={<LogOut size={14} aria-hidden="true" />}
+                    onClick={handleLogout}
+                    ariaLabel="Log out"
+                  >
+                    Logout
+                  </Button>
+                </div>
+              )}
+            </div>
           </div>
         </header>
 
@@ -265,7 +517,18 @@ export const Describe = () => {
               </div>
 
               <div className="p-3 sm:p-5 space-y-4">
+                <Separator />
+
                 <div className="relative rounded-2xl overflow-hidden bg-[#101824] aspect-video flex items-center justify-center border border-[#2F3C4C]">
+                  <video
+                    ref={setVideoElement}
+                    autoPlay
+                    playsInline
+                    muted
+                    aria-hidden="true"
+                    className={`w-full h-full object-cover ${stream && isVideoReady ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+                  />
+
                   {isLoading && (
                     <div className="absolute inset-0 flex items-center justify-center bg-[#161F2C]/90 z-10">
                       <p className="text-[#7A8B9B] font-body animate-pulse">Starting camera…</p>
@@ -276,49 +539,87 @@ export const Describe = () => {
                       {error}
                     </p>
                   )}
-                  {stream && (
-                    <video
-                      ref={setVideoRef}
-                      autoPlay
-                      playsInline
-                      muted
-                      aria-hidden="true"
-                      className="w-full h-full object-cover"
-                    />
+                  {stream && !isVideoReady && !isLoading && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-[#161F2C]/65 z-10">
+                      <p className="text-[#E9EEF4] font-body text-sm">Warming camera up…</p>
+                    </div>
                   )}
                   {!stream && !isLoading && !error && (
-                    <p className="text-[#7A8B9B] font-body text-sm">Camera is not active yet.</p>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <button
+                        type="button"
+                        onClick={handleToggleCamera}
+                        className="text-[#7A8B9B] font-body text-sm text-center rounded-md px-2 py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#A9D1F5]"
+                      >
+                        Camera is not active yet.
+                      </button>
+                    </div>
                   )}
                 </div>
 
-                <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 sm:gap-4">
-                  <CaptureButton
-                    onCapture={() => handleCapture()}
-                    disabled={!isConnected || !stream || isLoading || walkMode === 'running'}
-                    isLoading={isPending}
-                  />
-                  <VoiceButton onToggle={toggleListening} />
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    leftIcon={<CircleHelp size={16} aria-hidden="true" />}
-                    onClick={() => setIsHelpOpen(true)}
-                    ariaLabel="Open voice command help"
-                  >
-                    Voice Help
-                  </Button>
-                  {stream && (
+                <div className="rounded-xl border border-[#2F3C4C] bg-[#0B121B]/70 p-2.5">
+                  <div className="flex flex-wrap items-center gap-2.5">
                     <Button
-                      variant="ghost"
+                      variant={stream ? 'secondary' : 'primary'}
                       size="sm"
-                      className="col-span-2 sm:col-span-1"
-                      leftIcon={<RefreshCw size={16} aria-hidden="true" />}
-                      onClick={handleRestartCamera}
-                      ariaLabel="Restart camera"
+                      className="size-12 shrink-0 p-0"
+                      onClick={handleToggleCamera}
+                      disabled={isLoading}
+                      ariaLabel={isLoading ? 'Camera is starting' : stream ? 'Stop camera' : 'Start camera'}
                     >
-                      Restart
+                      {isLoading ? <RefreshCw size={20} className="animate-spin" aria-hidden="true" /> : stream ? <Square size={20} aria-hidden="true" /> : <Camera size={20} aria-hidden="true" />}
                     </Button>
-                  )}
+
+                    {shouldShowCaptureButton && (
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        className="size-12 shrink-0 p-0"
+                        onClick={handleCaptureButtonPress}
+                        disabled={!canCaptureSingleImage || isPending}
+                        ariaLabel="Capture image and describe scene"
+                      >
+                        {isPending ? <RefreshCw size={20} className="animate-spin" aria-hidden="true" /> : <Camera size={20} aria-hidden="true" />}
+                      </Button>
+                    )}
+
+                    <VoiceButton onToggle={toggleListening} compact hideStatus className="shrink-0" />
+
+                    <Button
+                      variant={isSpeaking ? 'primary' : 'secondary'}
+                      size="sm"
+                      className="h-10 shrink-0 px-3"
+                      leftIcon={isSpeaking ? <VolumeX size={16} aria-hidden="true" /> : <Volume2 size={16} aria-hidden="true" />}
+                      onClick={isSpeaking ? stopSpeaking : undefined}
+                      disabled={!isSpeaking}
+                      ariaLabel={isSpeaking ? 'Stop speaking' : 'AI speaker idle'}
+                    >
+                      {isSpeaking ? 'Speaking' : 'Speaker'}
+                    </Button>
+
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className="h-10 shrink-0 px-3"
+                      leftIcon={<CircleHelp size={16} aria-hidden="true" />}
+                      onClick={() => setIsHelpOpen(true)}
+                      ariaLabel="Open voice command help"
+                    >
+                      Help
+                    </Button>
+
+                    {stream && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="size-12 shrink-0 p-0"
+                        onClick={handleRestartCamera}
+                        ariaLabel="Restart camera"
+                      >
+                        <RefreshCw size={18} aria-hidden="true" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
 
                 {!isConnected && (
@@ -336,17 +637,17 @@ export const Describe = () => {
             <Card className="p-4 sm:p-5">
               <h2 className="font-display text-lg font-semibold text-[#E9EEF4]">Walk Mode (Realtime)</h2>
               <div className="mt-4 rounded-2xl border border-[#2F3C4C] bg-[#0B121B] p-3 sm:p-4">
-                <span className="inline-flex items-center gap-1 rounded-full border border-[#2F3C4C] bg-[#161F2C] px-2.5 py-1 text-[11px] font-body text-[#E9EEF4]">
+                <Badge variant="outline" className="h-6 text-[11px]">
                   {walkModeLabel}
-                </span>
+                </Badge>
 
                 <div className="mt-3 grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
                   <Button
                     size="sm"
                     variant="primary"
                     leftIcon={<Play size={14} aria-hidden="true" />}
-                    onClick={startWalkMode}
-                    disabled={!canRunWalkMode || walkMode === 'running'}
+                    onClick={handleStartWalkMode}
+                    disabled={!isConnected || isLoading || walkMode === 'running' || (stream && !isVideoReady)}
                     ariaLabel="Start walk mode"
                   >
                     Start
@@ -354,29 +655,19 @@ export const Describe = () => {
                   <Button
                     size="sm"
                     variant="secondary"
-                    leftIcon={<Pause size={14} aria-hidden="true" />}
-                    onClick={pauseWalkMode}
-                    disabled={walkMode !== 'running'}
-                    ariaLabel="Pause walk mode"
+                    leftIcon={walkMode === 'running' ? <Pause size={14} aria-hidden="true" /> : <Play size={14} aria-hidden="true" />}
+                    onClick={handleToggleWalkPause}
+                    disabled={!canToggleWalkPause}
+                    ariaLabel={walkMode === 'running' ? 'Pause walk mode' : 'Resume walk mode'}
                   >
-                    Pause
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    leftIcon={<Play size={14} aria-hidden="true" />}
-                    onClick={resumeWalkMode}
-                    disabled={walkMode !== 'paused' || !canRunWalkMode}
-                    ariaLabel="Resume walk mode"
-                  >
-                    Resume
+                    {walkMode === 'running' ? 'Pause' : 'Resume'}
                   </Button>
                   <Button
                     size="sm"
                     variant="ghost"
                     className="col-span-2 sm:col-span-1"
                     leftIcon={<Square size={14} aria-hidden="true" />}
-                    onClick={stopWalkMode}
+                    onClick={handleStopWalkMode}
                     disabled={walkMode === 'idle'}
                     ariaLabel="Stop walk mode"
                   >
@@ -415,7 +706,7 @@ export const Describe = () => {
               <Card className="p-4 sm:p-5 h-full">
                 <div className="flex items-center justify-between gap-2">
                   <h3 className="font-display text-base font-semibold text-[#E9EEF4]">AI Description</h3>
-                  {data?.confidence != null && (
+                  {data?.confidence != null && !walkLatestDescription && (
                     <span className="text-xs font-body text-[#7A8B9B]">
                       Confidence {(data.confidence * 100).toFixed(0)}%
                     </span>
@@ -428,7 +719,7 @@ export const Describe = () => {
                   </p>
                 )}
 
-                {data?.description ? (
+                {activeDescription ? (
                   <>
                     <div
                       aria-live="polite"
@@ -436,13 +727,13 @@ export const Describe = () => {
                       aria-label="Scene description"
                       className={`mt-3 text-[#E9EEF4] font-body leading-relaxed ${fontSizeClass}`}
                     >
-                      {data.description}
+                      {activeDescription}
                     </div>
                     <div className="mt-4 flex flex-wrap gap-3">
                       <Button
                         variant="secondary"
                         size="sm"
-                        onClick={() => speak(data.description)}
+                        onClick={() => speak(activeDescription)}
                         ariaLabel="Read description aloud again"
                       >
                         Read Aloud
@@ -468,7 +759,7 @@ export const Describe = () => {
         </section>
       </div>
 
-      <VoiceHelpModal isOpen={isHelpOpen} onClose={() => setIsHelpOpen(false)} />
+      <VoiceHelpModal isOpen={isHelpOpen} onClose={() => setIsHelpOpen(false)} onTutorial={playTutorial} />
     </main>
   )
 }

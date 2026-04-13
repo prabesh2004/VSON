@@ -1,17 +1,17 @@
 export const VOICE_COMMANDS = /** @type {const} */ ([
+  'start',
+  'walk mode',
   'describe',
+  'capture',
   'describe in detail',
   'start walk mode',
   'pause walk mode',
   'resume walk mode',
   'stop walk mode',
-  'read this page',
-  'open book',
-  'next page',
-  'previous page',
   'go back',
   'stop',
   'repeat',
+  'tutorial',
   'settings',
   'help',
 ])
@@ -40,6 +40,7 @@ export const WALK_TARGET_FPS_MAX = 2
 
 export const ROUTES = {
   HOME: '/',
+  LOGIN: '/login',
   DESCRIBE: '/describe',
   SESSION_MEMORY: '/session-memory',
   READ_WEB: '/read-web',

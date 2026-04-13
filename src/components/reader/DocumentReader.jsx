@@ -58,17 +58,7 @@ export const DocumentReader = memo(
 
       handledVoiceNonceRef.current = voiceAction.nonce
 
-      if (voiceAction.type === 'next page' && data.has_next) {
-        mutate({ file: uploadedFile, page: currentPage + 1 })
-        return
-      }
-
-      if (voiceAction.type === 'previous page' && currentPage > 1) {
-        mutate({ file: uploadedFile, page: currentPage - 1 })
-        return
-      }
-
-      if ((voiceAction.type === 'read this page' || voiceAction.type === 'repeat') && onReadAloud) {
+      if (voiceAction.type === 'repeat' && onReadAloud) {
         onReadAloud(data.text, data.title)
       }
     }, [voiceAction, uploadedFile, data, currentPage, mutate, onReadAloud])

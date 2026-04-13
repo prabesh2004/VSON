@@ -1,10 +1,11 @@
 import { http, HttpResponse } from 'msw'
 
-const BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
+const endpoint = (path) => new RegExp(`/${path}(?:\\?.*)?$`)
+const endpointWithId = (path) => new RegExp(`/${path}/[^/?#]+(?:\\?.*)?$`)
 
 export const handlers = [
   // POST /describe
-  http.post(`${BASE}/describe`, async () => {
+  http.post(endpoint('describe'), async () => {
     await delay(800)
     return HttpResponse.json({
       description:
@@ -14,7 +15,7 @@ export const handlers = [
   }),
 
   // POST /read-url
-  http.post(`${BASE}/read-url`, async () => {
+  http.post(endpoint('read-url'), async () => {
     await delay(600)
     return HttpResponse.json({
       title: 'Example Article',
@@ -24,7 +25,7 @@ export const handlers = [
   }),
 
   // POST /read-document
-  http.post(`${BASE}/read-document`, async () => {
+  http.post(endpoint('read-document'), async () => {
     await delay(700)
     return HttpResponse.json({
       title: 'Sample Document',
@@ -36,20 +37,20 @@ export const handlers = [
   }),
 
   // POST /tts
-  http.post(`${BASE}/tts`, async () => {
+  http.post(endpoint('tts'), async () => {
     await delay(400)
     // Empty audio — browser TTS should be used first; this is a no-op fallback
     return HttpResponse.json({ audio_base64: '', duration_seconds: 0 })
   }),
 
   // POST /transcribe
-  http.post(`${BASE}/transcribe`, async () => {
+  http.post(endpoint('transcribe'), async () => {
     await delay(500)
     return HttpResponse.json({ transcript: 'describe', confidence: 0.95 })
   }),
 
   // GET /preferences/:id
-  http.get(`${BASE}/preferences/:id`, () => {
+  http.get(endpointWithId('preferences'), () => {
     return HttpResponse.json({
       voice_speed: 1,
       detail_level: 'standard',
@@ -59,13 +60,13 @@ export const handlers = [
   }),
 
   // PUT /preferences/:id
-  http.put(`${BASE}/preferences/:id`, async () => {
+  http.put(endpointWithId('preferences'), async () => {
     await delay(300)
     return HttpResponse.json({ success: true })
   }),
 
   // GET /health
-  http.get(`${BASE}/health`, () => {
+  http.get(endpoint('health'), () => {
     return HttpResponse.json({ status: 'ok', version: 'mock-1.0.0' })
   }),
 ]

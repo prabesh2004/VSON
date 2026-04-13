@@ -3,10 +3,41 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --background: 214 42% 7%;
+    --foreground: 210 29% 93%;
+    --card: 214 31% 13%;
+    --card-foreground: 210 29% 93%;
+    --popover: 214 31% 13%;
+    --popover-foreground: 210 29% 93%;
+    --primary: 208 70% 81%;
+    --primary-foreground: 214 42% 7%;
+    --secondary: 214 26% 20%;
+    --secondary-foreground: 210 29% 93%;
+    --muted: 213 25% 18%;
+    --muted-foreground: 211 17% 62%;
+    --accent: 214 31% 18%;
+    --accent-foreground: 210 29% 93%;
+    --destructive: 0 78% 66%;
+    --destructive-foreground: 210 29% 93%;
+    --border: 213 24% 24%;
+    --input: 213 24% 24%;
+    --ring: 208 70% 81%;
+    --radius: 0.75rem;
+  }
+
   *,
   *::before,
   *::after {
+    @apply border-border;
     box-sizing: border-box;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  *::-webkit-scrollbar {
+    width: 0;
+    height: 0;
   }
 
   html {
@@ -14,12 +45,18 @@
   }
 
   body {
-    @apply bg-[#0B121B] text-[#E9EEF4] font-body antialiased;
+    @apply bg-background text-foreground font-body antialiased;
     min-height: 100dvh;
+    overflow-x: hidden;
+  }
+
+  button:not(:disabled),
+  [role='button']:not(:disabled) {
+    cursor: pointer;
   }
 
   :focus-visible {
-    @apply outline-none ring-2 ring-[#A9D1F5] ring-offset-2 ring-offset-[#0B121B];
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
   }
 
   :focus:not(:focus-visible) {

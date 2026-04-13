@@ -43,17 +43,12 @@ export const ReadWeb = () => {
       return true
     }
 
-    if (command === 'open book') {
-      navigate(ROUTES.READ_DOC)
-      return true
-    }
-
     if (command === 'help') {
       setIsHelpOpen(true)
       return true
     }
 
-    if ((command === 'read this page' || command === 'repeat') && content) {
+    if (command === 'repeat' && content) {
       handleReadAloud(content.text, content.title)
       return true
     }

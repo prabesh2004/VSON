@@ -1,9 +1,9 @@
 import { useNavigate } from 'react-router-dom'
 import { motion, useReducedMotion } from 'framer-motion'
-import { Copy, Handshake, Mic, Smile, Sparkles } from 'lucide-react'
+import { Handshake, Mic, Smile, Sparkles } from 'lucide-react'
 import { PwaFloating } from '@/components/landing/PwaFloating'
-import { RoomIllustration } from '@/components/landing/RoomIllustration'
 import { VoiceWaveform } from '@/components/landing/VoiceWaveform'
+import mainImage from '@/images/main.png'
 import { ROUTES } from '@/lib/constants'
 
 const _MOTION = motion
@@ -119,7 +119,7 @@ export const LandingHero = () => {
                 <div className={cardInner}>
                   <div className="rounded-[0.95rem] border border-[#2F3C4C] overflow-hidden bg-[#0B121B] shrink-0 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
                     <div className="aspect-[16/10] w-full">
-                      <RoomIllustration />
+                      <img src={mainImage} alt="Vision scene preview" className="h-full w-full object-cover" />
                     </div>
                   </div>
 
@@ -132,7 +132,7 @@ export const LandingHero = () => {
                         Builds a persistent memory of your environment across each session.
                       </p>
                     </div>
-                    <Copy className="w-4 h-4 text-[#7A8B9B] shrink-0 mt-0.5" strokeWidth={1.5} aria-hidden="true" />
+                   
                   </div>
                 </div>
               </motion.article>

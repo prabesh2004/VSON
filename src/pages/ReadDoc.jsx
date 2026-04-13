@@ -44,23 +44,12 @@ export const ReadDoc = () => {
       return true
     }
 
-    if (command === 'open book') {
-      navigate(ROUTES.READ_DOC)
-      return true
-    }
-
     if (command === 'help') {
       setIsHelpOpen(true)
       return true
     }
 
-    if (command === 'next page' || command === 'previous page') {
-      if (!hasDocument) return false
-      setVoiceAction({ type: command, nonce: Date.now() })
-      return true
-    }
-
-    if (command === 'read this page' || command === 'repeat') {
+    if (command === 'repeat') {
       if (!hasDocument) return false
       setVoiceAction({ type: command, nonce: Date.now() })
       return true

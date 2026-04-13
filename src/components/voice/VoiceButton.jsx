@@ -9,33 +9,40 @@ const _MOTION = motion
  * @typedef {Object} VoiceButtonProps
  * @property {() => void} onToggle
  * @property {string} [className]
+ * @property {boolean} [compact=false]
+ * @property {boolean} [hideStatus=false]
  */
 
 export const VoiceButton = memo(
   /**
    * @param {VoiceButtonProps} props
    */
-  function VoiceButton({ onToggle, className = '' }) {
+  function VoiceButton({ onToggle, className = '', compact = false, hideStatus = false }) {
     const prefersReduced = useReducedMotion()
-    const { isListening, isProcessing, isSpeaking } = useVoiceStore()
+    const { isListening, isProcessing } = useVoiceStore()
     const statusId = useId()
 
-    const isActive = isListening || isSpeaking
-    const isIdle = !isListening && !isProcessing && !isSpeaking
+    const isIdle = !isListening && !isProcessing
+    const iconSize = compact ? 20 : 32
 
     const label = isProcessing
       ? 'Processing voice command'
       : isListening
       ? 'Stop listening'
-      : isSpeaking
-      ? 'Vision is speaking'
       : 'Start voice command'
 
+    const statusText = isProcessing ? 'Processing…' : isListening ? 'Listening…' : 'Tap to speak'
+
+    const statusClass = [
+      'text-sm font-body font-medium',
+      isListening ? 'text-[#00D4AA]' : isIdle ? 'text-[#7A8B9B]' : 'text-[#A9D1F5]',
+    ].join(' ')
+
     return (
-      <div className="flex flex-col items-center gap-3">
+      <div className={hideStatus ? 'flex items-center' : 'flex flex-col items-center gap-3'}>
         <motion.button
           onClick={onToggle}
-          disabled={isProcessing || isSpeaking}
+          disabled={isProcessing}
           aria-label={label}
           aria-describedby={statusId}
           aria-pressed={isListening}
@@ -49,14 +56,12 @@ export const VoiceButton = memo(
           whileTap={prefersReduced ? {} : { scale: 0.95 }}
           className={[
             'relative flex items-center justify-center rounded-full',
-            'min-w-[80px] min-h-[80px] w-20 h-20',
+            compact ? 'min-w-[48px] min-h-[48px] w-12 h-12' : 'min-w-[80px] min-h-[80px] w-20 h-20',
             'transition-colors duration-200',
             'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#A9D1F5] focus-visible:ring-offset-4 focus-visible:ring-offset-[#0B121B]',
             'disabled:opacity-60 disabled:cursor-not-allowed',
             isListening
               ? 'bg-[#00D4AA] text-[#0B121B] shadow-[0_0_30px_rgba(0,212,170,0.4)]'
-              : isActive
-              ? 'bg-[#A9D1F5] text-[#0B121B]'
               : 'bg-[#161F2C] border-2 border-[#A9D1F5] text-[#A9D1F5] hover:bg-[#A9D1F5]/10',
             className,
           ].join(' ')}
@@ -72,11 +77,11 @@ export const VoiceButton = memo(
           )}
 
           {isProcessing ? (
-            <Loader2 size={32} className="animate-spin" aria-hidden="true" />
+            <Loader2 size={iconSize} className="animate-spin" aria-hidden="true" />
           ) : isListening ? (
-            <MicOff size={32} aria-hidden="true" />
+            <MicOff size={iconSize} aria-hidden="true" />
           ) : (
-            <Mic size={32} aria-hidden="true" />
+            <Mic size={iconSize} aria-hidden="true" />
           )}
         </motion.button>
 
@@ -84,18 +89,9 @@ export const VoiceButton = memo(
           id={statusId}
           aria-live="polite"
           aria-atomic="true"
-          className={[
-            'text-sm font-body font-medium',
-            isListening ? 'text-[#00D4AA]' : isIdle ? 'text-[#7A8B9B]' : 'text-[#A9D1F5]',
-          ].join(' ')}
+          className={hideStatus ? 'sr-only' : statusClass}
         >
-          {isProcessing
-            ? 'Processing…'
-            : isListening
-            ? 'Listening…'
-            : isSpeaking
-            ? 'Speaking…'
-            : 'Tap to speak'}
+          {statusText}
         </span>
       </div>
     )

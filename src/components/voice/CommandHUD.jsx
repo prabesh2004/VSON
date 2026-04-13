@@ -20,8 +20,8 @@ export const CommandHUD = memo(
 
     const displayText =
       voiceError ||
+      (isListening && liveTranscript ? `Heard: ${liveTranscript}` : null) ||
       commandFeedback ||
-      (isListening ? liveTranscript : null) ||
       (isProcessing ? 'Processing command...' : null) ||
       lastCommand
 
